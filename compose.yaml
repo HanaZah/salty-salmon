@@ -1,0 +1,15 @@
+services:
+  oracle:
+    image: gvenzl/oracle-free:latest
+    container_name: oracle-db-java-project
+    ports:
+      - "1521:1521"
+    environment:
+      - ORACLE_PASSWORD=${ORACLE_PWD}
+      - APP_USER=${DB_USERNAME}
+      - APP_USER_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+
+volumes:
+  oracle-data:
