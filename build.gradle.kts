@@ -32,6 +32,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
 	implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
+	implementation("org.hashids:hashids:1.0.3")
 	compileOnly("org.projectlombok:lombok")
 	runtimeOnly("com.oracle.database.jdbc:ojdbc11")
 	annotationProcessor("org.projectlombok:lombok")
@@ -40,6 +41,10 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-security-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+	testImplementation("org.springframework.boot:spring-boot-test")
+	testImplementation("org.springframework.boot:spring-boot-testcontainers")
+	testImplementation("org.testcontainers:oracle-free:1.19.7")
+	testImplementation("org.testcontainers:junit-jupiter:1.19.7")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -51,4 +56,12 @@ dependencyManagement {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+
+	val mockitoAgent = configurations.testRuntimeClasspath.get()
+		.find { it.name.contains("mockito-core") }
+
+	if (mockitoAgent != null) {
+		jvmArgs("-javaagent:$mockitoAgent", "-Xshare:off")
+	}
+
 }

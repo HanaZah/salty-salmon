@@ -22,5 +22,5 @@ public class City {
     private String name;
 
     @Column(nullable = false)
-    private Integer psc;
+    private String psc;
 }

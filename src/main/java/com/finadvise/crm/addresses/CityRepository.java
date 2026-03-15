@@ -5,5 +5,5 @@ import java.util.Optional;
 
 public interface CityRepository extends JpaRepository<City, Long> {
 
-    Optional<City> findByNameAndPsc(String name, Integer psc);
+    Optional<City> findByNameAndPsc(String name, String psc);
 }

@@ -12,7 +12,7 @@ public class AddressMapper {
 
         String streetName = null;
         String cityName = null;
-        Integer psc = null;
+        String psc = null;
 
         Street street = address.getStreet();
         if (street != null) {
@@ -30,8 +30,7 @@ public class AddressMapper {
                 streetName,
                 cityName,
                 psc,
-                address.getHouseNumber(),
-                address.getOrientationNumber()
+                address.getHouseNumber()
         );
     }
 }

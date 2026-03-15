@@ -19,10 +19,7 @@ public class Address {
     private Long id;
 
     @Column(name = "HOUSE_NUMBER", nullable = false)
-    private Integer houseNumber;
-
-    @Column(name = "ORIENTATION_NUMBER")
-    private Integer orientationNumber;
+    private String houseNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "STREET_ID", nullable = false)

@@ -1,6 +1,8 @@
 package com.finadvise.crm.addresses;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +14,8 @@ public class AddressService {
     private final CityRepository cityRepository;
     private final StreetRepository streetRepository;
     private final AddressRepository addressRepository;
+    private final AddressMapper addressMapper;
+    private final ExternalAddressValidator addressValidator;
 
     /**
      * Resolves an AddressDTO into a managed Address entity.
@@ -19,39 +23,40 @@ public class AddressService {
      * creating new ones only if they don't already exist.
      */
     @Transactional
-    public Address findOrCreateAddress(AddressDTO dto) {
+    public AddressDTO findOrCreateAddress(AddressDTO dto) {
         if (dto == null) {
             return null;
         }
+        addressValidator.validate(dto);
 
-        City city = cityRepository.findByNameAndPsc(dto.cityName(), dto.psc())
+        City city = cityRepository.findByNameAndPsc(dto.city(), dto.postalCode())
                 .orElseGet(() -> {
                     City newCity = City.builder()
-                            .name(dto.cityName())
-                            .psc(dto.psc())
+                            .name(dto.city())
+                            .psc(dto.postalCode())
                             .build();
                     return cityRepository.save(newCity);
                 });
 
-        Street street = streetRepository.findByNameAndCityId(dto.streetName(), city.getId())
+        Street street = streetRepository.findByNameAndCityId(dto.street(), city.getId())
                 .orElseGet(() -> {
                     Street newStreet = Street.builder()
-                            .name(dto.streetName())
+                            .name(dto.street())
                             .city(city)
                             .build();
                     return streetRepository.save(newStreet);
                 });
 
         // 3. Find or Create Address
-        return addressRepository.findByHouseNumberAndOrientationNumberAndStreetId(
-                        dto.houseNumber(), dto.orientationNumber(), street.getId())
+        Address address = addressRepository.findByHouseNumberAndStreetId(
+                            dto.houseNumber(), street.getId())
                 .orElseGet(() -> {
                     Address newAddress = Address.builder()
                             .houseNumber(dto.houseNumber())
-                            .orientationNumber(dto.orientationNumber())
                             .street(street)
                             .build();
                     return addressRepository.save(newAddress);
                 });
+        return addressMapper.toDto(address);
     }
 }
