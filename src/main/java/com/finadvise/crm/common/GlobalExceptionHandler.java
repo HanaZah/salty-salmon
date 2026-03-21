@@ -10,62 +10,65 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final String BASE_URL = "https://api.finadvise.com/errors/";
+
     @ExceptionHandler(InvalidPasswordException.class)
     public ResponseEntity<ProblemDetail> handleInvalidPassword(InvalidPasswordException ex) {
-        ProblemDetail error = ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                ex.getMessage()
-        );
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problem.setTitle("Invalid Password");
+        problem.setType(URI.create(BASE_URL + "invalid-password"));
+        return ResponseEntity.of(problem).build();
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleResourceNotFound(ResourceNotFoundException ex) {
-
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                ex.getMessage()
-        );
-        problem.setTitle("Resource Fetching Failed");
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setTitle("Resource Not Found");
+        problem.setType(URI.create(BASE_URL + "not-found"));
         return ResponseEntity.of(problem).build();
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ProblemDetail> handleBadCredentials() {
-
+    public ResponseEntity<ProblemDetail> handleBadCredentials(BadCredentialsException ex) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.UNAUTHORIZED,
                 "The username or password provided is incorrect."
         );
         problem.setTitle("Authentication Failed");
+        problem.setType(URI.create(BASE_URL + "authentication-failed"));
         return ResponseEntity.of(problem).build();
     }
 
-    // Catches custom RÚIAN/Validation errors
     @ExceptionHandler(AddressValidationException.class)
     public ResponseEntity<ProblemDetail> handleAddressValidation(AddressValidationException ex) {
-
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                HttpStatus.UNPROCESSABLE_CONTENT,
-                ex.getMessage()
-        );
-
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
         problem.setTitle("Address Validation Failed");
+        problem.setType(URI.create(BASE_URL + "address-validation-failed"));
         return ResponseEntity.of(problem).build();
     }
 
-    // Catches Jakarta Bean Validation errors
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ProblemDetail> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                "One or more fields failed validation constraints."
+        );
+        problem.setTitle("Validation Failed");
+        problem.setType(URI.create(BASE_URL + "validation-failed"));
+
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(error ->
-                errors.put(error.getField(), error.getDefaultMessage()));
-        return ResponseEntity.badRequest().body(errors);
+                errors.put(error.getField(), error.getDefaultMessage())
+        );
+        problem.setProperty("errors", errors);
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem);
     }
 }
