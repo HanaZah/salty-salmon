@@ -293,7 +293,7 @@ BEGIN
     IF INSERTING AND :NEW.MANAGER_ID IS NOT NULL THEN
         raise_application_error(-20002, 'A new advisor cannot have a manager assigned immediately (PP02).');
 END IF;
-    IF :NEW.MANAGER_ID = :NEW.ADVISOR_ID THEN
+    IF :NEW.MANAGER_ID = :NEW.USER_ID THEN
         raise_application_error(-20010, 'An advisor cannot be their own manager (PP10).');
 END IF;
 END;

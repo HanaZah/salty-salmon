@@ -34,8 +34,6 @@ class AddressFullStackIT {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Autowired
-    private AddressRepository addressRepository;
 
     @Test
     void shouldExecuteFullFlowFromApiToOracle() throws Exception {
@@ -49,7 +47,7 @@ class AddressFullStackIT {
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
-                .getContentAsString();;
+                .getContentAsString();
 
 
         AddressDTO responseDto = objectMapper.readValue(result, AddressDTO.class);

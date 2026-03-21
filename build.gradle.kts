@@ -31,7 +31,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
-	implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
+	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
 	implementation("org.hashids:hashids:1.0.3")
 	compileOnly("org.projectlombok:lombok")
 	runtimeOnly("com.oracle.database.jdbc:ojdbc11")
@@ -49,9 +49,6 @@ dependencies {
 }
 
 dependencyManagement {
-	imports {
-		mavenBom("org.springframework.cloud:spring-cloud-dependencies:${property("springCloudVersion")}")
-	}
 }
 
 tasks.withType<Test> {
