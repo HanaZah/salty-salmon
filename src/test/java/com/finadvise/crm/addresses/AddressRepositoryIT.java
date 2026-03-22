@@ -29,7 +29,6 @@ class AddressRepositoryIT {
 
     @Test
     void shouldSaveAndRetrieveAddress() {
-        // 1. Setup the hierarchy
         City prague = City.builder()
                 .psc("100 00")
                 .name("Praha")
@@ -47,12 +46,10 @@ class AddressRepositoryIT {
                 .houseNumber("5")
                 .build();
 
-        // 2. Action
         Address savedAddress = addressRepository.save(address);
         entityManager.flush();
         entityManager.clear();
 
-        // 3. Assertion
         Address retrieved = addressRepository.findById(savedAddress.getId()).orElseThrow();
 
         assertEquals("Thákurova", retrieved.getStreet().getName());

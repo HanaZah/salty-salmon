@@ -26,7 +26,7 @@ class AddressFullStackIT {
 
     @Container
     @ServiceConnection
-    static OracleContainer oracle = new OracleContainer("gvenzl/oracle-free:latest");
+    static OracleContainer oracle = new OracleContainer("gvenzl/oracle-free:slim-faststart");
 
     @Autowired
     private MockMvc mockMvc;
