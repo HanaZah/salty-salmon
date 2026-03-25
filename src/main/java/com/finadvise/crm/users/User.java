@@ -33,6 +33,10 @@ public abstract class User implements Persistable<Long> {
     @Column(name = "LAST_NAME", nullable = false, length = 50)
     private String lastName;
 
+    @Version
+    @Column(name = "VERSION", nullable = false)
+    private Integer version;
+
     @Column(name = "IS_ACTIVE", nullable = false)
     @JdbcTypeCode(SqlTypes.INTEGER)
     private boolean isActive = true;
