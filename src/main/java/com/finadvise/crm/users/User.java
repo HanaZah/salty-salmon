@@ -39,6 +39,7 @@ public abstract class User implements Persistable<Long> {
 
     @Column(name = "IS_ACTIVE", nullable = false)
     @JdbcTypeCode(SqlTypes.INTEGER)
+    @Builder.Default
     private boolean isActive = true;
 
     @Transient // Tells Hibernate NOT to create a database column for this
