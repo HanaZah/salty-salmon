@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS CLIENTS (
                          PERMANENT_ADDR_ID   INTEGER NOT NULL,
                          CONTACT_ADDR_ID     INTEGER NOT NULL,
                          VERSION             INTEGER DEFAULT 0 NOT NULL,
+                         IS_ACTIVE           NUMBER(1) DEFAULT 1 NOT NULL,
                          CONSTRAINT CLIENT_PK PRIMARY KEY (CLIENT_ID),
                          CONSTRAINT CLIENT_PERSONAL_ID_UN UNIQUE (PERSONAL_ID),
                          CONSTRAINT CLIENT_ID_CARD_UN UNIQUE (ID_CARD_NUMBER),
@@ -101,7 +102,8 @@ CREATE TABLE IF NOT EXISTS CLIENTS (
                          CONSTRAINT CLIENT_EXPIRY_CK CHECK (ID_CARD_EXPIRY_DATE > ID_CARD_ISSUE_DATE),
                          CONSTRAINT CLIENT_ADVISOR_FK FOREIGN KEY (ADVISOR_ID) REFERENCES ADVISORS (USER_ID),
                          CONSTRAINT CLIENT_PERM_ADDR_FK FOREIGN KEY (PERMANENT_ADDR_ID) REFERENCES ADDRESSES (ADDRESS_ID),
-                         CONSTRAINT CLIENT_CONT_ADDR_FK FOREIGN KEY (CONTACT_ADDR_ID) REFERENCES ADDRESSES (ADDRESS_ID)
+                         CONSTRAINT CLIENT_CONT_ADDR_FK FOREIGN KEY (CONTACT_ADDR_ID) REFERENCES ADDRESSES (ADDRESS_ID),
+                         CONSTRAINT CLIENT_ACTIVE_CK CHECK (IS_ACTIVE IN (0, 1))
 );
 /
 
@@ -274,7 +276,7 @@ FROM CLIENTS C
 
 CREATE OR REPLACE TRIGGER TRG_ADDRESSES_BU
 BEFORE UPDATE ON ADDRESSES
-                  FOR EACH ROW
+FOR EACH ROW
 BEGIN
     raise_application_error(-20011, 'Address records are immutable. Create a new record for changes (PP11).');
 END;
@@ -282,45 +284,61 @@ END;
 
 CREATE OR REPLACE TRIGGER TRG_CLIENTS_BIU
 BEFORE INSERT OR UPDATE ON CLIENTS
-                            FOR EACH ROW
+FOR EACH ROW
+DECLARE
+    v_adv_active NUMBER(1);
 BEGIN
     :NEW.LAST_UPDATE := TRUNC(SYSDATE);
     IF :NEW.BIRTH_DATE > ADD_MONTHS(TRUNC(SYSDATE), -12*18) THEN
         raise_application_error(-20012, 'Client must be at least 18 years old (PP12).');
-END IF;
+    END IF;
+    IF INSERTING OR (UPDATING AND :NEW.ADVISOR_ID <> :OLD.ADVISOR_ID) THEN
+        SELECT IS_ACTIVE INTO v_adv_active FROM USERS WHERE USER_ID = :NEW.ADVISOR_ID;
+        IF v_adv_active = 0 THEN
+            raise_application_error(-20013, 'Cannot assign an inactive advisor to a client.');
+        END IF;
+    END IF;
 END;
 /
 
 CREATE OR REPLACE TRIGGER TRG_ADVISORS_BIU
 BEFORE INSERT OR UPDATE ON ADVISORS
-                            FOR EACH ROW
+FOR EACH ROW
 BEGIN
     IF INSERTING AND :NEW.MANAGER_ID IS NOT NULL THEN
         raise_application_error(-20002, 'A new advisor cannot have a manager assigned immediately (PP02).');
-END IF;
+    END IF;
     IF :NEW.MANAGER_ID = :NEW.USER_ID THEN
         raise_application_error(-20010, 'An advisor cannot be their own manager (PP10).');
-END IF;
+    END IF;
 END;
 /
 
 CREATE OR REPLACE TRIGGER TRG_INCOMES_BIU
 BEFORE INSERT OR UPDATE ON INCOMES
-                            FOR EACH ROW
+FOR EACH ROW
 DECLARE
-v_linked NUMBER(1);
+    v_linked NUMBER(1);
     v_owner  INTEGER;
+    v_client_active NUMBER(1);
 BEGIN
+    IF INSERTING OR (UPDATING AND :NEW.CLIENT_ID <> :OLD.CLIENT_ID) THEN
+        SELECT IS_ACTIVE INTO v_client_active FROM CLIENTS WHERE CLIENT_ID = :NEW.CLIENT_ID;
+        IF v_client_active = 0 THEN
+            raise_application_error(-20016, 'Cannot add an income to an inactive client.');
+        END IF;
+    END IF;
+
     IF :NEW.ASSET_ID IS NOT NULL THEN
-SELECT IS_ASSET_LINKED INTO v_linked FROM INCOME_TYPES WHERE INCOME_TYPE_ID = :NEW.INCOME_TYPE_ID;
-IF v_linked = 0 THEN
+        SELECT IS_ASSET_LINKED INTO v_linked FROM INCOME_TYPES WHERE INCOME_TYPE_ID = :NEW.INCOME_TYPE_ID;
+        IF v_linked = 0 THEN
             raise_application_error(-20009, 'This income type cannot be linked to an asset.');
-END IF;
-SELECT CLIENT_ID INTO v_owner FROM ASSETS WHERE ASSET_ID = :NEW.ASSET_ID;
-IF v_owner <> :NEW.CLIENT_ID THEN
+        END IF;
+        SELECT CLIENT_ID INTO v_owner FROM ASSETS WHERE ASSET_ID = :NEW.ASSET_ID;
+        IF v_owner <> :NEW.CLIENT_ID THEN
             raise_application_error(-20009, 'Income and Asset must belong to the same client.');
-END IF;
-END IF;
+        END IF;
+    END IF;
 END;
 /
 
@@ -328,16 +346,76 @@ CREATE OR REPLACE TRIGGER TRG_PRODUCTS_BI
 BEFORE INSERT ON PRODUCTS
 FOR EACH ROW
 DECLARE
-v_expiry DATE;
+    v_expiry DATE;
     v_current_adv INTEGER;
+    v_client_active NUMBER(1);
+    v_manager_active NUMBER(1);
 BEGIN
-SELECT ID_CARD_EXPIRY_DATE, ADVISOR_ID INTO v_expiry, v_current_adv FROM CLIENTS WHERE CLIENT_ID = :NEW.CLIENT_ID;
-IF v_expiry < SYSDATE THEN
+    SELECT ID_CARD_EXPIRY_DATE, ADVISOR_ID, IS_ACTIVE
+    INTO v_expiry, v_current_adv, v_client_active
+    FROM CLIENTS WHERE CLIENT_ID = :NEW.CLIENT_ID;
+
+    IF v_client_active = 0 THEN
+        raise_application_error(-20014, 'Cannot arrange product: Client is inactive.');
+    END IF;
+    IF v_expiry < SYSDATE THEN
         raise_application_error(-20001, 'Cannot arrange product: Client ID card expired (PP01).');
-END IF;
-    IF :NEW.ARRANGED_BY_ID IS NOT NULL AND v_current_adv <> :NEW.ARRANGED_BY_ID THEN
-        raise_application_error(-20004, 'The arranger must be the client current advisor (PP04).');
-END IF;
+    END IF;
+    IF :NEW.MANAGED_BY_ID IS NOT NULL THEN
+        IF v_current_adv <> :NEW.MANAGED_BY_ID THEN
+            raise_application_error(-20004, 'The arranger must be the client current advisor (PP04).');
+        END IF;
+
+        SELECT IS_ACTIVE INTO v_manager_active FROM USERS WHERE USER_ID = :NEW.MANAGED_BY_ID;
+        IF v_manager_active = 0 THEN
+             raise_application_error(-20015, 'Cannot assign an inactive advisor to manage a product.');
+        END IF;
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER TRG_ASSETS_BIU
+BEFORE INSERT OR UPDATE ON ASSETS
+FOR EACH ROW
+DECLARE
+    v_client_active NUMBER(1);
+BEGIN
+    IF INSERTING OR (UPDATING AND :NEW.CLIENT_ID <> :OLD.CLIENT_ID) THEN
+        SELECT IS_ACTIVE INTO v_client_active FROM CLIENTS WHERE CLIENT_ID = :NEW.CLIENT_ID;
+        IF v_client_active = 0 THEN
+            raise_application_error(-20017, 'Cannot add an asset to an inactive client.');
+        END IF;
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER TRG_EXPENSES_BIU
+BEFORE INSERT OR UPDATE ON EXPENSES
+FOR EACH ROW
+DECLARE
+    v_client_active NUMBER(1);
+BEGIN
+    IF INSERTING OR (UPDATING AND :NEW.CLIENT_ID <> :OLD.CLIENT_ID) THEN
+        SELECT IS_ACTIVE INTO v_client_active FROM CLIENTS WHERE CLIENT_ID = :NEW.CLIENT_ID;
+        IF v_client_active = 0 THEN
+            raise_application_error(-20018, 'Cannot add an expense to an inactive client.');
+        END IF;
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER TRG_DOCUMENTS_BIU
+BEFORE INSERT OR UPDATE ON DOCUMENTS
+FOR EACH ROW
+DECLARE
+    v_client_active NUMBER(1);
+BEGIN
+    IF INSERTING OR (UPDATING AND :NEW.CLIENT_ID <> :OLD.CLIENT_ID) THEN
+        SELECT IS_ACTIVE INTO v_client_active FROM CLIENTS WHERE CLIENT_ID = :NEW.CLIENT_ID;
+        IF v_client_active = 0 THEN
+            raise_application_error(-20019, 'Cannot attach a document to an inactive client.');
+        END IF;
+    END IF;
 END;
 /
 
