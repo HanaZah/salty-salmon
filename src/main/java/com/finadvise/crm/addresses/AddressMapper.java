@@ -28,9 +28,9 @@ public class AddressMapper {
         return new AddressDTO(
                 address.getId(),
                 streetName,
+                address.getHouseNumber(),
                 cityName,
-                psc,
-                address.getHouseNumber()
+                psc
         );
     }
 }

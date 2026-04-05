@@ -18,9 +18,9 @@ public class City {
     @Column(name = "CITY_ID")
     private Long id;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 100, updatable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private String psc;
 }

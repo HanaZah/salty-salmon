@@ -18,10 +18,10 @@ public class Street {
     @Column(name = "STREET_ID")
     private Long id;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 100, updatable = false)
     private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "CITY_ID", nullable = false)
+    @JoinColumn(name = "CITY_ID", nullable = false, updatable = false)
     private City city;
 }

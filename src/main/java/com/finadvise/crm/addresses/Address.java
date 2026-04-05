@@ -15,13 +15,13 @@ public class Address {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "addr_gen")
     @SequenceGenerator(name = "addr_gen", sequenceName = "ADDR_SEQ", allocationSize = 1)
-    @Column(name = "ADDRESS_ID")
+    @Column(name = "ADDRESS_ID", updatable = false)
     private Long id;
 
-    @Column(name = "HOUSE_NUMBER", nullable = false)
+    @Column(name = "HOUSE_NUMBER", nullable = false, updatable = false)
     private String houseNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "STREET_ID", nullable = false)
+    @JoinColumn(name = "STREET_ID", nullable = false, updatable = false)
     private Street street;
 }
