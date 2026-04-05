@@ -1,4 +1,4 @@
-package com.finadvise.crm.users;
+package com.finadvise.crm.common;
 
 import jakarta.annotation.PostConstruct;
 import org.hashids.Hashids;
@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
-public class EmployeeIdGenerator {
+public class ObfuscatedIdGenerator {
     private final String salt;
     private final int minLength;
     private final String alphabet;
@@ -14,7 +14,7 @@ public class EmployeeIdGenerator {
     private static final long HASHIDS_LIMIT = 9007199254740991L;
     private Hashids hashids;
 
-    public EmployeeIdGenerator(
+    public ObfuscatedIdGenerator(
             @Value("${HASHID_SALT}") String salt,
             @Value("${HASHID_ALPHABET}") String alphabet,
             @Value("${HASHID_LENGTH}") int minLength) {

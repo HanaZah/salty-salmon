@@ -36,7 +36,6 @@ dependencies {
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1")
 	compileOnly("org.projectlombok:lombok")
 	runtimeOnly("com.oracle.database.jdbc:ojdbc11")
-	runtimeOnly("tools.jackson.module:jackson-module-kotlin:3.0.3")
 	annotationProcessor("org.projectlombok:lombok")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")

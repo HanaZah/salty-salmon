@@ -126,7 +126,8 @@ class UserFullStackIT {
         // Save it directly using your repository (or testEntityManager if autowired here)
         advisorRepository.save(advisor);
 
-        UpdateProfileRequestDTO request = new UpdateProfileRequestDTO("UpdatedFirst", "UpdatedLast", "1112223333");
+        UpdateProfileRequestDTO request = new UpdateProfileRequestDTO(
+                0,"UpdatedFirst", "UpdatedLast", "1112223333");
 
         mockMvc.perform(put("/api/v1/users/profile")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -138,7 +139,8 @@ class UserFullStackIT {
 
     @Test
     void updateProfile_Returns401_WhenUnauthenticated() throws Exception {
-        UpdateProfileRequestDTO request = new UpdateProfileRequestDTO("Hacker", "Man", "9998887777");
+        UpdateProfileRequestDTO request = new UpdateProfileRequestDTO(
+                0, "Hacker", "Man", "9998887777");
 
         mockMvc.perform(put("/api/v1/users/profile")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -157,6 +159,8 @@ class UserFullStackIT {
                 .passwordHash(currentHashedPassword)
                 .firstName("Pass")
                 .lastName("Changer")
+                .phone("123456789")
+                .email("pass@changer.mail")
                 .isActive(true)
                 .build();
 
@@ -180,6 +184,8 @@ class UserFullStackIT {
                 .passwordHash(currentHashedPassword)
                 .firstName("Bad")
                 .lastName("Passer")
+                .phone("123456789")
+                .email("bad@passer.mail")
                 .isActive(true)
                 .build();
         adminRepository.save(admin);
@@ -203,6 +209,8 @@ class UserFullStackIT {
                 .passwordHash(currentHashedPassword)
                 .firstName("Stubborn")
                 .lastName("User")
+                .phone("123456789")
+                .email("stub@born.mail")
                 .isActive(true)
                 .build();
         adminRepository.save(admin);

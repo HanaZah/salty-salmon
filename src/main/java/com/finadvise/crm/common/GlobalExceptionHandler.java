@@ -5,6 +5,7 @@ import com.finadvise.crm.users.InvalidPasswordException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -36,7 +37,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ProblemDetail> handleBadCredentials(BadCredentialsException ex) {
+    public ResponseEntity<ProblemDetail> handleBadCredentials() {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.UNAUTHORIZED,
                 "The username or password provided is incorrect."
@@ -69,6 +70,19 @@ public class GlobalExceptionHandler {
         );
         problem.setProperty("errors", errors);
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem);
+        return ResponseEntity.of(problem).build();
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ProblemDetail> handleOptimisticLockingFailure() {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                "The record was modified by another user. " +
+                        "Please refresh the page to see the latest data before making your changes."
+        );
+        problem.setTitle("Concurrent Update Conflict");
+        problem.setType(URI.create("https://api.yourdomain.com/errors/concurrent-update"));
+
+        return ResponseEntity.of(problem).build();
     }
 }

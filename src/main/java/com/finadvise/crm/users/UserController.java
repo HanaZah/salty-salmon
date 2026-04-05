@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -34,13 +35,13 @@ public class UserController {
 
     @Operation(summary = "Create Admin", description = "Registers a new System Administrator. Requires ROLE_ADMIN.")
     @ApiResponse(responseCode = "200", description = "Admin created successfully")@PostMapping("/new/admin")
-    public AdminDTO createNewAdmin(@RequestBody CreateAdminRequestDTO request) {
+    public AdminDTO createNewAdmin(@RequestBody @Valid CreateAdminRequestDTO request) {
         return userService.createAdmin(request);
     }
 
     @Operation(summary = "Create Advisor", description = "Registers a new Financial Advisor. Requires ROLE_ADMIN.")
     @ApiResponse(responseCode = "200", description = "Advisor created successfully")@PostMapping("/new/advisor")
-    public AdvisorDTO createNewAdvisor(@RequestBody CreateAdvisorRequestDTO request) {
+    public AdvisorDTO createNewAdvisor(@RequestBody @Valid CreateAdvisorRequestDTO request) {
         return userService.createAdvisor(request);
     }
 
@@ -51,7 +52,7 @@ public class UserController {
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PatchMapping("/password")
-    public ResponseEntity<Void> changePassword(@RequestBody ChangePasswordRequestDTO request, Principal principal) {
+    public ResponseEntity<Void> changePassword(@RequestBody @Valid ChangePasswordRequestDTO request, Principal principal) {
         userService.changePassword(principal.getName(), request);
         return ResponseEntity.noContent().build(); // Standard 204 No Content for successful updates
     }
@@ -65,7 +66,7 @@ public class UserController {
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PutMapping("/profile")
-    public ResponseEntity<Void> updateProfile(@RequestBody UpdateProfileRequestDTO request, Principal principal) {
+    public ResponseEntity<Void> updateProfile(@RequestBody @Valid UpdateProfileRequestDTO request, Principal principal) {
         userService.updateProfile(principal.getName(), request);
         return ResponseEntity.noContent().build();
     }

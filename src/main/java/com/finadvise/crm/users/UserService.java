@@ -1,8 +1,10 @@
 package com.finadvise.crm.users;
 
+import com.finadvise.crm.common.ObfuscatedIdGenerator;
 import com.finadvise.crm.common.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -23,7 +25,7 @@ public class UserService implements UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final AdvisorMapper advisorMapper;
     private final AdminMapper adminMapper;
-    private final EmployeeIdGenerator employeeIdGenerator;
+    private final ObfuscatedIdGenerator obfuscatedIdGenerator;
 
     /**
      * Creates a new advisor. Restricted to administrators.
@@ -39,7 +41,7 @@ public class UserService implements UserDetailsService {
         }
 
         Long nextId = userRepository.getNextSequenceValue();
-        String employeeId = employeeIdGenerator.encode(nextId);
+        String employeeId = obfuscatedIdGenerator.encode(nextId);
 
         Advisor advisor = Advisor.builder()
                 .id(nextId)
@@ -64,7 +66,7 @@ public class UserService implements UserDetailsService {
     public AdminDTO createAdmin(CreateAdminRequestDTO request) {
 
         Long nextId = userRepository.getNextSequenceValue();
-        String employeeId = employeeIdGenerator.encode(nextId);
+        String employeeId = obfuscatedIdGenerator.encode(nextId);
 
         Admin admin = Admin.builder()
                 .id(nextId)
@@ -136,28 +138,30 @@ public class UserService implements UserDetailsService {
         User user = userRepository.findByEmployeeId(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // 1. Verify the old password is correct
         if (!passwordEncoder.matches(request.oldPassword(), user.getPasswordHash())) {
             throw new InvalidPasswordException("Incorrect current password.");
         }
 
-        // 2. Prevent reusing the same password (optional but standard practice)
         if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
             throw new InvalidPasswordException("New password cannot be the same as the old password.");
         }
 
-        // 3. Encode and save
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
     }
 
     /**
      * Updates the basic profile information of the currently authenticated user.
+     * Uses version-based optimistic locking to prevent race conditions.
      */
     @Transactional
     public void updateProfile(String employeeId, UpdateProfileRequestDTO request) {
         User user = userRepository.findByEmployeeId(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (!user.getVersion().equals(request.version())) {
+            throw new ObjectOptimisticLockingFailureException(User.class, Objects.requireNonNull(user.getId()));
+        }
 
         if (request.firstName() != null && !request.firstName().isBlank()) {
             user.setFirstName(request.firstName());

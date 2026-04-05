@@ -50,6 +50,8 @@ class AuthFullStackIT {
                 .employeeId("LOGIN-001")
                 .firstName("Auth")
                 .lastName("Test")
+                .phone("987654321")
+                .email("auth@test.mail")
                 .passwordHash(passwordEncoder.encode(rawPassword))
                 .isActive(true)
                 .build();

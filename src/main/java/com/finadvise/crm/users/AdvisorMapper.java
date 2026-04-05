@@ -20,6 +20,7 @@ public class AdvisorMapper {
 
         return new AdvisorDTO(
                 advisor.getId(),
+                advisor.getVersion(),
                 advisor.getEmployeeId(),
                 advisor.getIco(),
                 advisor.getFirstName(),

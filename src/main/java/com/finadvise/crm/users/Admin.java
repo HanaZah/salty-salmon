@@ -13,6 +13,6 @@ import lombok.experimental.SuperBuilder;
 public class Admin extends User {
     @Override
     public String getRole() {
-        return "ROLE_ADVISOR";
+        return "ADMIN";
     }
 }

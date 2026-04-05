@@ -1,5 +1,6 @@
 package com.finadvise.crm.users;
 
+import com.finadvise.crm.common.ObfuscatedIdGenerator;
 import com.finadvise.crm.common.ResourceNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -8,6 +9,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,6 +18,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,23 +28,21 @@ class UserServiceTest {
     @Mock
     private AdvisorRepository advisorRepository;
     @Mock
-    private AdminRepository adminRepository;
-    @Mock
     private UserRepository userRepository;
     @Mock
     private PasswordEncoder passwordEncoder;
     @Mock
     private AdvisorMapper advisorMapper;
     @Mock
-    private AdminMapper adminMapper;
-    @Mock
-    private EmployeeIdGenerator employeeIdGenerator;
+    private ObfuscatedIdGenerator obfuscatedIdGenerator;
 
     @InjectMocks
     private UserService userService;
 
     @Captor
     private ArgumentCaptor<Advisor> advisorCaptor;
+    @Captor
+    private ArgumentCaptor<User> userCaptor;
 
     @Test
     void createAdvisor_ThrowsException_WhenIcoAlreadyExists() {
@@ -65,7 +67,8 @@ class UserServiceTest {
                 );
         Advisor savedAdvisor = Advisor.builder().id(100L).build();
         AdvisorDTO expectedDto = new AdvisorDTO(
-                100L,                 // id
+                100L,              // id
+                0,                    // version
                 "EMP-100",            // employeeId
                 "12345678",           // ico
                 "John",               // firstName
@@ -79,7 +82,7 @@ class UserServiceTest {
         when(advisorRepository.existsByIco(anyString())).thenReturn(false);
         when(advisorRepository.existsByEmail(anyString())).thenReturn(false);
         when(userRepository.getNextSequenceValue()).thenReturn(100L);
-        when(employeeIdGenerator.encode(100L)).thenReturn("EMP-100");
+        when(obfuscatedIdGenerator.encode(100L)).thenReturn("EMP-100");
         when(passwordEncoder.encode("Pass123")).thenReturn("hashed-pass");
         when(advisorRepository.save(any(Advisor.class))).thenReturn(savedAdvisor);
         when(advisorMapper.toDto(savedAdvisor)).thenReturn(expectedDto);
@@ -178,7 +181,11 @@ class UserServiceTest {
     @Test
     void changePassword_UpdatesPassword_WhenOldPasswordIsCorrect() {
         ChangePasswordRequestDTO request = new ChangePasswordRequestDTO("OldPass123", "NewPass123");
-        User mockUser = Admin.builder().employeeId("A1234567").passwordHash("hashed-old-pass").build();
+        User mockUser = Admin.builder()
+                .id(333L)
+                .employeeId("A1234567")
+                .passwordHash("hashed-old-pass")
+                .build();
 
         when(userRepository.findByEmployeeId("A1234567")).thenReturn(Optional.of(mockUser));
         when(passwordEncoder.matches("OldPass123", "hashed-old-pass")).thenReturn(true);
@@ -187,8 +194,11 @@ class UserServiceTest {
 
         userService.changePassword("A1234567", request);
 
-        verify(userRepository).save(mockUser);
-        assertThat(mockUser.getPasswordHash()).isEqualTo("hashed-new-pass");
+        verify(userRepository).save(userCaptor.capture());
+        User updatedUser = userCaptor.getValue();
+
+        assertEquals("hashed-new-pass", updatedUser.getPasswordHash());
+        assertEquals(333L, updatedUser.getId());
     }
 
     @Test
@@ -225,8 +235,15 @@ class UserServiceTest {
     @Test
     void updateProfile_UpdatesPhone_WhenUserIsAdvisor() {
         UpdateProfileRequestDTO request = new UpdateProfileRequestDTO(
-                "NewFirst", "NewLast", "9998887777");
-        Advisor mockAdvisor = Advisor.builder().employeeId("A1234567").firstName("Old").lastName("Name").phone("111").build();
+                0, "NewFirst", "NewLast", "9998887777");
+        Advisor mockAdvisor = Advisor.builder()
+                .employeeId("A1234567")
+                .firstName("Old")
+                .lastName("Name")
+                .phone("111")
+                .email("old@name.mail")
+                .version(0)
+                .build();
 
         when(userRepository.findByEmployeeId("A1234567")).thenReturn(Optional.of(mockAdvisor));
 
@@ -240,8 +257,15 @@ class UserServiceTest {
     @Test
     void updateProfile_IgnoresPhone_WhenUserIsAdmin() {
         UpdateProfileRequestDTO request = new UpdateProfileRequestDTO(
-                "NewFirst", "NewLast", "9998887777");
-        Admin mockAdmin = Admin.builder().employeeId("B1234567").firstName("Old").lastName("Name").build();
+                0, "NewFirst", "NewLast", "9998887777");
+        Admin mockAdmin = Admin.builder()
+                .employeeId("B1234567")
+                .firstName("Old")
+                .lastName("Name")
+                .phone("123456789")
+                .email("old@name.mail")
+                .version(0)
+                .build();
 
         when(userRepository.findByEmployeeId("B1234567")).thenReturn(Optional.of(mockAdmin));
 
@@ -249,5 +273,24 @@ class UserServiceTest {
 
         verify(userRepository).save(mockAdmin);
         assertThat(mockAdmin.getFirstName()).isEqualTo("NewFirst");
+    }
+
+    @Test
+    void updateProfile_ThrowsOptimisticLockingException_WhenVersionsDoNotMatch() {
+        UpdateProfileRequestDTO request = new UpdateProfileRequestDTO(
+                1, "NewFirst", "NewLast", "9998887777");
+        Advisor mockAdvisor = Advisor.builder()
+                .id(123L)
+                .employeeId("A1234567")
+                .version(0)
+                .build();
+
+        when(userRepository.findByEmployeeId("A1234567")).thenReturn(Optional.of(mockAdvisor));
+
+        assertThrows(ObjectOptimisticLockingFailureException.class, () -> {
+            userService.updateProfile("A1234567", request);
+        });
+
+        verify(userRepository, never()).save(any());
     }
 }

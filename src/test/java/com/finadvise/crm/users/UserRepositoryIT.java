@@ -38,6 +38,8 @@ class UserRepositoryIT {
                 .passwordHash("hash")
                 .firstName("Super")
                 .lastName("User")
+                .phone("123456789")
+                .email("super@user.mail")
                 .isActive(true)
                 .build();
 
