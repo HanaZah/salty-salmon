@@ -2,6 +2,7 @@ package com.finadvise.crm.budget;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +19,7 @@ public class BudgetDatabaseSeeder implements CommandLineRunner {
 
     @Override
     @Transactional
-    public void run(String... args) {
+    public void run(String @NonNull ... args) {
         seedIncomeTypes();
         seedExpenseTypes();
     }
