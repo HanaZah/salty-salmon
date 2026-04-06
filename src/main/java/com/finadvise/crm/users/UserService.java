@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -192,4 +193,7 @@ public class UserService implements UserDetailsService {
                 advisorRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Advisor not found")));
     }
 
+    public List<String> getActiveAdminEmails() {
+        return adminRepository.findActiveEmails();
+    }
 }
