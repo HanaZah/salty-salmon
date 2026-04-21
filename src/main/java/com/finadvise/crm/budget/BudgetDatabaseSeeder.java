@@ -28,11 +28,11 @@ public class BudgetDatabaseSeeder implements CommandLineRunner {
         if (incomeTypeRepository.count() == 0) {
             log.info("Seeding Czech Income Types...");
             incomeTypeRepository.saveAll(List.of(
-                    IncomeType.builder().name("Zaměstnání").isAssetLinked(false).build(),
-                    IncomeType.builder().name("Podnikání / OSVČ").isAssetLinked(false).build(),
-                    IncomeType.builder().name("Příjem z pronájmu").isAssetLinked(true).build(),
-                    IncomeType.builder().name("Dividendy / Investice").isAssetLinked(true).build(),
-                    IncomeType.builder().name("Důchod / Dávky").isAssetLinked(false).build()
+                    IncomeType.builder().name("Zaměstnání").build(),
+                    IncomeType.builder().name("Podnikání / OSVČ").build(),
+                    IncomeType.builder().name("Příjem z pronájmu").build(),
+                    IncomeType.builder().name("Dividendy / Investice").build(),
+                    IncomeType.builder().name("Důchod / Dávky").build()
             ));
         }
     }
