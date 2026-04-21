@@ -57,10 +57,14 @@ class BudgetServiceIT {
     @Autowired
     private ExpenseTypeRepository expenseTypeRepository;
 
-    private Client initializeTestClient(Long id, String uid, String personalId, String lastName, Advisor advisor) {
-        City testCity = cityRepository.save(City.builder().name("Prague").psc("123 45").build());
-        Street testStreet = streetRepository.save(Street.builder().city(testCity).name("Vodičkova").build());
-        Address testAddress = addressRepository.save(Address.builder().street(testStreet).houseNumber("123/45").build());
+    private Client initializeTestClient(Long id, String uid, String personalId, String idCardNumber, String lastName,
+                                        Advisor advisor) {
+        City testCity = cityRepository.findByNameAndPsc("Prague", "123 45")
+                .orElseGet(() -> cityRepository.save(City.builder().name("Prague").psc("123 45").build()));
+        Street testStreet = streetRepository.findByNameAndCityId("Vodičkova", testCity.getId())
+                .orElseGet(() -> streetRepository.save(Street.builder().city(testCity).name("Vodičkova").build()));
+        Address testAddress = addressRepository.findByHouseNumberAndStreetId("123/45", testStreet.getId())
+                .orElseGet(() -> addressRepository.save(Address.builder().street(testStreet).houseNumber("123/45").build()));
 
         return Client.builder()
                 .id(id)
@@ -71,7 +75,7 @@ class BudgetServiceIT {
                 .lastName(lastName)
                 .phone("123456789")
                 .email("budget@" + lastName + ".mail")
-                .idCardNumber("000000000")
+                .idCardNumber(idCardNumber)
                 .idCardIssueDate(LocalDate.now().minusYears(2))
                 .idCardExpiryDate(LocalDate.now().plusYears(13))
                 .idCardIssuer("Some Issuer")
@@ -105,7 +109,8 @@ class BudgetServiceIT {
         Advisor testAdvisor = initializeTestAdvisor(234L, "BGADV_01", "12345678", "Advisor");
         advisorRepository.save(testAdvisor);
 
-        Client testClient = initializeTestClient(1L, "BGCLI-01", "0000000000", "Happy", testAdvisor);
+        Client testClient = initializeTestClient(1L, "BGCLI-01", "0000000000", "000000000",
+                "Happy", testAdvisor);
         clientRepository.save(testClient);
 
         IncomeType testIncomeType = incomeTypeRepository.save(IncomeType.builder().name("TestIncome").build());
@@ -148,7 +153,8 @@ class BudgetServiceIT {
         Advisor anotherTestAdvisor = initializeTestAdvisor(456L, "BGADV_03", "34567890", "Wrong");
         advisorRepository.save(anotherTestAdvisor);
 
-        Client testClient = initializeTestClient(22L, "BGCLI-02", "2222222222", "Sad", testAdvisor);
+        Client testClient = initializeTestClient(22L, "BGCLI-02", "2222222222", "222222222",
+                "Sad", testAdvisor);
         clientRepository.save(testClient);
 
         assertThatThrownBy(() -> budgetService.getBudget(testClient.getId(), anotherTestAdvisor.getEmployeeId()))
