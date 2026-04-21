@@ -2,8 +2,6 @@ package com.finadvise.crm.budget;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "INCOME_TYPES")
@@ -20,9 +18,4 @@ public class IncomeType {
 
     @Column(name = "NAME", nullable = false, unique = true, length = 50)
     private String name;
-
-    @Column(name = "IS_ASSET_LINKED", nullable = false)
-    @JdbcTypeCode(SqlTypes.INTEGER)
-    @Builder.Default
-    private boolean isAssetLinked = false;
 }

@@ -31,11 +31,6 @@ public class Income {
     @Fetch(FetchMode.JOIN)
     private IncomeType incomeType;
 
-// assets package not yet implemented
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "ASSET_ID")
-//    private Asset asset;
-
     @Version
     @Column(name = "VERSION", nullable = false)
     @Builder.Default
