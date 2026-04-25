@@ -82,7 +82,7 @@ public class GlobalExceptionHandler {
                         "Please refresh the page to see the latest data before making your changes."
         );
         problem.setTitle("Concurrent Update Conflict");
-        problem.setType(URI.create("https://api.yourdomain.com/errors/concurrent-update"));
+        problem.setType(URI.create(BASE_URL + "concurrent-update"));
 
         return ResponseEntity.of(problem).build();
     }
@@ -95,6 +95,18 @@ public class GlobalExceptionHandler {
         );
         problem.setTitle("Access Denied");
         problem.setType(URI.create(BASE_URL + "access-denied"));
+
+        return ResponseEntity.of(problem).build();
+    }
+
+    @ExceptionHandler(MissingVersionException.class)
+    public ResponseEntity<ProblemDetail> handleMissingVersion(MissingVersionException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage()
+        );
+        problem.setTitle("Missing Version");
+        problem.setType(URI.create(BASE_URL + "missing-version"));
 
         return ResponseEntity.of(problem).build();
     }
