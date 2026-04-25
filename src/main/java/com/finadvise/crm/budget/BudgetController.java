@@ -22,6 +22,18 @@ public class BudgetController {
 
     private final BudgetService budgetService;
 
+    @Operation(summary = "Get Client Budget", description = "Retrieves the full budget snapshot for a specific client.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Budget retrieved successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied (Not the assigned advisor)"),
+            @ApiResponse(responseCode = "404", description = "Client not found",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @GetMapping
+    public BudgetFullDTO getBudget(@PathVariable Long clientId, Principal principal) {
+        return budgetService.getBudget(clientId, principal.getName());
+    }
+
     @Operation(summary = "Update Client Budget", description = "Synchronizes the client's budget. Creates, updates, or removes items based on the payload.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Budget successfully updated"),

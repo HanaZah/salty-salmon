@@ -22,6 +22,8 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -41,11 +43,13 @@ class BudgetFullstackIT {
     @Autowired private IncomeRepository incomeRepository;
     @Autowired private IncomeTypeRepository incomeTypeRepository;
     @Autowired private TestFixtureFactory testFixtureFactory;
+    @Autowired private ExpenseRepository expenseRepository;
+    @Autowired private ExpenseTypeRepository expenseTypeRepository;
 
     private Client testClient;
 
     @BeforeEach
-    void setUp() { Advisor advisor = testFixtureFactory.getOrCreateTestAdvisor(1234L, "ADV-1234", "12312312", "Fullbudget");
+    void setUp() { Advisor advisor = testFixtureFactory.getOrCreateTestAdvisor(1234L, "ADV_1234", "12312312", "Fullbudget");
 
         testClient = testFixtureFactory.getOrCreateTestClient(
                 11L, "CLI_11" ,"0987654321", "987654321", "Smith", advisor);
@@ -56,7 +60,7 @@ class BudgetFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ADV-1234", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_1234", roles = "ADVISOR")
     void updateBudget_Success_CreatesNewIncome() throws Exception {
         BudgetItemDTO newIncomeDto = new BudgetItemDTO(
                 null, // null ID means create
@@ -94,5 +98,46 @@ class BudgetFullstackIT {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.title").value("Access Denied"))
                 .andExpect(jsonPath("$.detail").value("Unauthorized budget update attempt."));
+    }
+
+    @Test
+    @WithMockUser(username = "ADV_1234", roles = "ADVISOR")
+    void getBudget_Success_ReturnsCalculatedBudgetSnapshot() throws Exception {
+        IncomeType salaryType = incomeTypeRepository.findByName("Zaměstnání").orElseThrow();
+        incomeRepository.save(Income.builder()
+                .amount(50000)
+                .incomeType(salaryType)
+                .client(testClient)
+                .build());
+
+        ExpenseType rentType = expenseTypeRepository.findByName("Nájem")
+                .orElseGet(() -> expenseTypeRepository.save(ExpenseType.builder().name("Nájem").build()));
+        expenseRepository.save(Expense.builder()
+                .amount(20000)
+                .expenseType(rentType)
+                .isMandatory(true)
+                .client(testClient)
+                .build());
+
+        mockMvc.perform(get("/api/v1/clients/{clientId}/budget", testClient.getId())
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalIncomes").value(50000))
+                .andExpect(jsonPath("$.totalExpenses").value(20000))
+                .andExpect(jsonPath("$.netCashflow").value(30000)) // 50000 - 20000
+                .andExpect(jsonPath("$.incomes", hasSize(1)))
+                .andExpect(jsonPath("$.expenses", hasSize(1)))
+                .andExpect(jsonPath("$.incomes[0].type").value("Zaměstnání"))
+                .andExpect(jsonPath("$.expenses[0].isMandatory").value(true));
+    }
+
+    @Test
+    @WithMockUser(username = "ROGUE_99", roles = "ADVISOR")
+    void getBudget_Fails_WhenAdvisorDoesNotOwnClient() throws Exception {
+        mockMvc.perform(get("/api/v1/clients/{clientId}/budget", testClient.getId())
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value("Access Denied"))
+                .andExpect(jsonPath("$.detail").value("Assigned advisor mismatch for client budget access"));
     }
 }
