@@ -76,7 +76,7 @@ class BudgetServiceIT {
                 .client(testClient)
                 .build());
 
-        BudgetFullDTO result = budgetService.getBudget(testClient.getId(), testAdvisor.getEmployeeId());
+        BudgetFullDTO result = budgetService.getBudget(testClient.getClientUid(), testAdvisor.getEmployeeId());
 
         assertThat(result.totalIncomes()).isEqualByComparingTo("5000.00");
         assertThat(result.netCashflow()).isEqualByComparingTo("2000.00");
@@ -93,7 +93,7 @@ class BudgetServiceIT {
         Client testClient = testFixtureFactory.getOrCreateTestClient(
                 22L, "BGCLI-02", "2222222222", "222222222", "Sad", testAdvisor);
 
-        assertThatThrownBy(() -> budgetService.getBudget(testClient.getId(), anotherTestAdvisor.getEmployeeId()))
+        assertThatThrownBy(() -> budgetService.getBudget(testClient.getClientUid(), anotherTestAdvisor.getEmployeeId()))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("Assigned advisor mismatch for client budget access");
     }

@@ -30,11 +30,13 @@ public class BudgetService {
     private final OwnershipValidator ownershipValidator;
 
     @Transactional(readOnly = true)
-    public BudgetFullDTO getBudget(Long clientId, String requesterEmployeeId) throws AccessDeniedException {
-        if(!ownershipValidator.canAccessClient(clientId, requesterEmployeeId)) {
+    public BudgetFullDTO getBudget(String clientUid, String requesterEmployeeId) throws AccessDeniedException {
+        if(!ownershipValidator.canAccessClient(clientUid, requesterEmployeeId)) {
             throw new AccessDeniedException("Assigned advisor mismatch for client budget access");
         }
 
+        Long clientId = clientRepository.findIdByClientUid(clientUid)
+                .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
         List<BudgetItemDTO> incomes = incomeRepository.findAllByClientId(clientId).stream()
                 .map(budgetMapper::toDto)
                 .toList();
@@ -53,19 +55,19 @@ public class BudgetService {
     }
 
     @Transactional
-    public void updateFullBudget(Long clientId, BudgetFullDTO dto, String requesterId) {
-        if (!ownershipValidator.canAccessClient(clientId, requesterId)) {
+    public void updateFullBudget(String clientUid, BudgetFullDTO dto, String requesterId) {
+        if (!ownershipValidator.canAccessClient(clientUid, requesterId)) {
             throw new AccessDeniedException("Unauthorized budget update attempt.");
         }
 
+        Long clientId = clientRepository.findIdByClientUid(clientUid)
+                .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
         List<Income> currentIncomes = incomeRepository.findAllByClientId(clientId);
         List<Expense> currentExpenses = expenseRepository.findAllByClientId(clientId);
         validateVersions(dto.incomes(), currentIncomes, Income.class);
         validateVersions(dto.expenses(), currentExpenses, Expense.class);
         applyIncomeUpdates(clientId, dto.incomes(), currentIncomes);
         applyExpenseUpdates(clientId, dto.expenses(), currentExpenses);
-
-        // Summary values are naturally updated by the DB/JPA flush
     }
 
     private Long getIdFromEntity(Object entity) {

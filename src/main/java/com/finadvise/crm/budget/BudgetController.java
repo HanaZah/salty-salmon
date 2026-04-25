@@ -16,7 +16,7 @@ import java.security.Principal;
 
 @Tag(name = "Client Budget", description = "Operations for managing a client's income and expenses")
 @RestController
-@RequestMapping("/api/v1/clients/{clientId}/budget")
+@RequestMapping("/api/v1/clients/{clientUid}/budget")
 @RequiredArgsConstructor
 public class BudgetController {
 
@@ -30,8 +30,8 @@ public class BudgetController {
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @GetMapping
-    public BudgetFullDTO getBudget(@PathVariable Long clientId, Principal principal) {
-        return budgetService.getBudget(clientId, principal.getName());
+    public BudgetFullDTO getBudget(@PathVariable String clientUid, Principal principal) {
+        return budgetService.getBudget(clientUid, principal.getName());
     }
 
     @Operation(summary = "Update Client Budget", description = "Synchronizes the client's budget. Creates, updates, or removes items based on the payload.")
@@ -45,11 +45,11 @@ public class BudgetController {
     })
     @PutMapping
     public ResponseEntity<Void> updateBudget(
-            @PathVariable Long clientId,
+            @PathVariable String clientUid,
             @Valid @RequestBody BudgetFullDTO request,
             Principal principal) {
 
-        budgetService.updateFullBudget(clientId, request, principal.getName());
+        budgetService.updateFullBudget(clientUid, request, principal.getName());
         return ResponseEntity.noContent().build();
     }
 }

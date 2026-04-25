@@ -77,7 +77,7 @@ class BudgetFullstackIT {
                 List.of()
         );
 
-        mockMvc.perform(put("/api/v1/clients/{clientId}/budget", testClient.getId())
+        mockMvc.perform(put("/api/v1/clients/{clientUid}/budget", testClient.getClientUid())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isNoContent());
@@ -93,7 +93,7 @@ class BudgetFullstackIT {
     void updateBudget_Fails_WhenAdvisorDoesNotOwnClient() throws Exception {
         BudgetFullDTO payload = new BudgetFullDTO(null, null, null, List.of(), List.of());
 
-        mockMvc.perform(put("/api/v1/clients/{clientId}/budget", testClient.getId())
+        mockMvc.perform(put("/api/v1/clients/{clientUid}/budget", testClient.getClientUid())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isForbidden())
@@ -119,7 +119,7 @@ class BudgetFullstackIT {
                 .client(testClient)
                 .build());
 
-        mockMvc.perform(get("/api/v1/clients/{clientId}/budget", testClient.getId())
+        mockMvc.perform(get("/api/v1/clients/{clientUid}/budget", testClient.getClientUid())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalIncomes").value(50000))
@@ -134,7 +134,7 @@ class BudgetFullstackIT {
     @Test
     @WithMockUser(username = "ROGUE_99", roles = "ADVISOR")
     void getBudget_Fails_WhenAdvisorDoesNotOwnClient() throws Exception {
-        mockMvc.perform(get("/api/v1/clients/{clientId}/budget", testClient.getId())
+        mockMvc.perform(get("/api/v1/clients/{clientUid}/budget", testClient.getClientUid())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.title").value("Access Denied"))
