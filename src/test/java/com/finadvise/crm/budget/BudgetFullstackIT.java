@@ -58,7 +58,6 @@ class BudgetFullstackIT {
     @Test
     @WithMockUser(username = "ADV-1234", roles = "ADVISOR")
     void updateBudget_Success_CreatesNewIncome() throws Exception {
-        // 1. Arrange: Create a payload simulating the UI adding a new income
         BudgetItemDTO newIncomeDto = new BudgetItemDTO(
                 null, // null ID means create
                 "Zaměstnání",
@@ -73,26 +72,22 @@ class BudgetFullstackIT {
                 List.of()
         );
 
-        // 2. Act: Perform the PUT request
         mockMvc.perform(put("/api/v1/clients/{clientId}/budget", testClient.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload)))
-                .andExpect(status().isNoContent()); // 3. Assert HTTP Status
+                .andExpect(status().isNoContent());
 
-        // 4. Assert Database State
         List<Income> savedIncomes = incomeRepository.findAllByClientId(testClient.getId());
         assertThat(savedIncomes).hasSize(1);
-        assertThat(savedIncomes.get(0).getAmount()).isEqualTo(50000);
-        assertThat(savedIncomes.get(0).getIncomeType().getName()).isEqualTo("Zaměstnání");
+        assertThat(savedIncomes.getFirst().getAmount()).isEqualTo(50000);
+        assertThat(savedIncomes.getFirst().getIncomeType().getName()).isEqualTo("Zaměstnání");
     }
 
     @Test
     @WithMockUser(username = "ROGUE_99", roles = "ADVISOR")
     void updateBudget_Fails_WhenAdvisorDoesNotOwnClient() throws Exception {
-        // 1. Arrange
         BudgetFullDTO payload = new BudgetFullDTO(null, null, null, List.of(), List.of());
 
-        // 2. Act & Assert: Expect 403 Forbidden due to OwnershipValidator
         mockMvc.perform(put("/api/v1/clients/{clientId}/budget", testClient.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload)))

@@ -2,10 +2,8 @@ package com.finadvise.crm.budget;
 
 import com.finadvise.crm.addresses.*;
 import com.finadvise.crm.clients.Client;
-import com.finadvise.crm.clients.ClientRepository;
 import com.finadvise.crm.common.TestFixtureFactory;
 import com.finadvise.crm.users.Advisor;
-import com.finadvise.crm.users.AdvisorRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
