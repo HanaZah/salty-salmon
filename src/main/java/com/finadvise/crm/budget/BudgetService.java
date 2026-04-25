@@ -146,8 +146,8 @@ public class BudgetService {
     }
 
     private void createNewIncome(Long clientId, BudgetItemDTO dto) {
-        IncomeType type = incomeTypeRepository.findByName(dto.type())
-                .orElseThrow(() -> new ResourceNotFoundException("Income Type not found: " + dto.type()));
+        IncomeType type = incomeTypeRepository.findById(dto.typeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Income Type ID not found: " + dto.typeId()));
 
         Income newIncome = Income.builder()
                 .amount(dto.amount())
@@ -159,8 +159,8 @@ public class BudgetService {
     }
 
     private void createNewExpense(Long clientId, BudgetItemDTO dto) {
-        ExpenseType type = expenseTypeRepository.findByName(dto.type())
-                .orElseThrow(() -> new ResourceNotFoundException("Expense Type not found: " + dto.type()));
+        ExpenseType type = expenseTypeRepository.findById(dto.typeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Expense Type ID not found: " + dto.typeId()));
 
         boolean mandatoryFlag = Boolean.TRUE.equals(dto.isMandatory());  //null-safe flag extraction
 

@@ -1,14 +1,16 @@
 package com.finadvise.crm.budget;
 
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record BudgetItemDTO(
         Long id,
 
-        @NotBlank(message = "Budget item type is required")
-        String type,
+        @NotNull(message = "Budget item type ID is required")
+        Long typeId,
+
+        // Read-only field for UI to display a localized type name
+        String typeName,
 
         @NotNull(message = "Budget item amount is required")
         @Min(value = 0, message = "Amount cannot be negative")

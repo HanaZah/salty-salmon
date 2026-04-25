@@ -6,5 +6,4 @@ import java.util.Optional;
 
 public interface IncomeTypeRepository extends JpaRepository<IncomeType, Long> {
     Optional<IncomeType> findByName(String name);
-    Boolean existsByName(String name);
 }

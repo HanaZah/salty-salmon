@@ -47,6 +47,7 @@ class BudgetFullstackIT {
     @Autowired private ExpenseTypeRepository expenseTypeRepository;
 
     private Client testClient;
+    private IncomeType testIncomeType;
 
     @BeforeEach
     void setUp() { Advisor advisor = testFixtureFactory.getOrCreateTestAdvisor(1234L, "ADV_1234", "12312312", "Fullbudget");
@@ -54,9 +55,8 @@ class BudgetFullstackIT {
         testClient = testFixtureFactory.getOrCreateTestClient(
                 11L, "CLI_11" ,"0987654321", "987654321", "Smith", advisor);
 
-        if (!incomeTypeRepository.existsByName("Zaměstnání")) {
-            incomeTypeRepository.save(IncomeType.builder().name("Zaměstnání").build());
-        }
+        testIncomeType = incomeTypeRepository.findByName("Zaměstnání")
+                .orElseGet(() -> incomeTypeRepository.save(IncomeType.builder().name("Zaměstnání").build()));
     }
 
     @Test
@@ -64,6 +64,7 @@ class BudgetFullstackIT {
     void updateBudget_Success_CreatesNewIncome() throws Exception {
         BudgetItemDTO newIncomeDto = new BudgetItemDTO(
                 null, // null ID means create
+                testIncomeType.getId(),
                 "Zaměstnání",
                 50000,
                 null,
@@ -103,10 +104,9 @@ class BudgetFullstackIT {
     @Test
     @WithMockUser(username = "ADV_1234", roles = "ADVISOR")
     void getBudget_Success_ReturnsCalculatedBudgetSnapshot() throws Exception {
-        IncomeType salaryType = incomeTypeRepository.findByName("Zaměstnání").orElseThrow();
         incomeRepository.save(Income.builder()
                 .amount(50000)
-                .incomeType(salaryType)
+                .incomeType(testIncomeType)
                 .client(testClient)
                 .build());
 
@@ -127,7 +127,7 @@ class BudgetFullstackIT {
                 .andExpect(jsonPath("$.netCashflow").value(30000)) // 50000 - 20000
                 .andExpect(jsonPath("$.incomes", hasSize(1)))
                 .andExpect(jsonPath("$.expenses", hasSize(1)))
-                .andExpect(jsonPath("$.incomes[0].type").value("Zaměstnání"))
+                .andExpect(jsonPath("$.incomes[0].typeName").value(testIncomeType.getName()))
                 .andExpect(jsonPath("$.expenses[0].isMandatory").value(true));
     }
 

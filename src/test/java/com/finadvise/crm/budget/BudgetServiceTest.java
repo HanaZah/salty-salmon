@@ -36,13 +36,13 @@ class BudgetServiceTest {
         Long clientId = 1L;
         String requesterId = "ADV_01";
 
-        IncomeType incomeType = IncomeType.builder().name("Salary").build();
+        IncomeType incomeType = IncomeType.builder().id(1L).name("Salary").build();
         Income existingIncome = Income.builder().id(100L).version(2).incomeType(incomeType).build();
 
         when(ownershipValidator.canAccessClient(clientId, requesterId)).thenReturn(true);
         when(incomeRepository.findAllByClientId(clientId)).thenReturn(List.of(existingIncome));
 
-        BudgetItemDTO staleDto = new BudgetItemDTO(100L, "Salary", 50000, null, 1);
+        BudgetItemDTO staleDto = new BudgetItemDTO(100L, 1L,"Salary", 50000, null, 1);
         BudgetFullDTO request = new BudgetFullDTO(null, null, null, List.of(staleDto), List.of());
 
         assertThrows(ObjectOptimisticLockingFailureException.class, () ->
@@ -58,20 +58,23 @@ class BudgetServiceTest {
         Long clientId = 1L;
         String requesterId = "ADV_01";
 
-        IncomeType salaryType = IncomeType.builder().name("Salary").build();
+        IncomeType salaryType = IncomeType.builder().id(1L).name("Salary").build();
         Income incomeToUpdate = Income.builder().id(10L).amount(1000).version(1).incomeType(salaryType).build();
         Income incomeToDelete = Income.builder().id(11L).amount(500).version(1).incomeType(salaryType).build();
 
         when(ownershipValidator.canAccessClient(clientId, requesterId)).thenReturn(true);
         when(incomeRepository.findAllByClientId(clientId)).thenReturn(List.of(incomeToUpdate, incomeToDelete));
 
-        when(incomeTypeRepository.findByName("Salary")).thenReturn(Optional.of(salaryType));
+        when(incomeTypeRepository.findById(1L)).thenReturn(Optional.of(salaryType));
         when(clientRepository.getReferenceById(clientId)).thenReturn(new Client()); // Mock proxy
 
         // Setup DTO request from UI
-        BudgetItemDTO updateDto = new BudgetItemDTO(10L, "Salary", 1500, null, 1); // Amount changed 1000 -> 1500
-        BudgetItemDTO deleteDto = new BudgetItemDTO(11L, "Salary", 0, null, 1);   // Amount 0 -> should delete
-        BudgetItemDTO createDto = new BudgetItemDTO(null, "Salary", 3000, null, null); // New item
+        BudgetItemDTO updateDto = new BudgetItemDTO(
+                10L, 1L, "Salary", 1500, null, 1); // Amount changed 1000 -> 1500
+        BudgetItemDTO deleteDto = new BudgetItemDTO(
+                11L, 1L, "Salary", 0, null, 1);   // Amount 0 -> should delete
+        BudgetItemDTO createDto = new BudgetItemDTO(
+                null, 1L, "Salary", 3000, null, null); // New item
 
         BudgetFullDTO request = new BudgetFullDTO(null, null, null,
                 List.of(updateDto, deleteDto, createDto),
@@ -104,7 +107,7 @@ class BudgetServiceTest {
         when(ownershipValidator.canAccessClient(clientId, requesterId)).thenReturn(true);
         when(incomeRepository.findAllByClientId(clientId)).thenReturn(List.of(existingIncome));
 
-        BudgetItemDTO malformedDto = new BudgetItemDTO(100L, "Salary", 50000, null, null);
+        BudgetItemDTO malformedDto = new BudgetItemDTO(100L, 1L, "Salary", 50000, null, null);
         BudgetFullDTO request = new BudgetFullDTO(null, null, null, List.of(malformedDto), List.of());
 
         assertThrows(MissingVersionException.class, () ->
