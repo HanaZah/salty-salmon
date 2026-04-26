@@ -1,6 +1,9 @@
 package com.finadvise.crm.common;
 
 import com.finadvise.crm.addresses.*;
+import com.finadvise.crm.assets.Asset;
+import com.finadvise.crm.assets.AssetRepository;
+import com.finadvise.crm.assets.AssetType;
 import com.finadvise.crm.clients.Client;
 import com.finadvise.crm.clients.ClientRepository;
 import com.finadvise.crm.users.Advisor;
@@ -23,6 +26,9 @@ public class TestFixtureFactory {
 
     @Autowired
     private CityRepository cityRepository;
+
+    @Autowired
+    private AssetRepository assetRepository;
 
     @Autowired
     private StreetRepository streetRepository;
@@ -88,5 +94,14 @@ public class TestFixtureFactory {
         }
 
         return advisor;
+    }
+
+    public Asset getOrCreateTestAsset(String name, Client client, AssetType type, Integer value) {
+        return assetRepository.save(Asset.builder()
+                .name(name)
+                .value(value)
+                .client(client)
+                .assetType(type)
+                .build());
     }
 }
