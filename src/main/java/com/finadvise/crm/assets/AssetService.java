@@ -21,13 +21,12 @@ public class AssetService {
 
     @Transactional
     public ClientAssetsDTO getClientsAssets(String clientUid, String employeeId) {
-        Long clientId = clientRepository.findIdByClientUid(clientUid)
-                .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
-
         if(!ownershipValidator.canAccessClient(clientUid, employeeId)) {
-            throw new AccessDeniedException("Assigned advisor mismatch for client assets access");
+            throw new AccessDeniedException("Client not found or access denied");
         }
 
+        Long clientId = clientRepository.findIdByClientUid(clientUid)
+                .orElseThrow();
         List<AssetDTO> assets = assetRepository.findAllByClientId(clientId).stream().map(assetMapper::toDto).toList();
         Long totalValue = assets.stream().mapToLong(AssetDTO::value).sum();
 
@@ -36,12 +35,12 @@ public class AssetService {
 
     @Transactional
     public AssetDTO createAsset(String clientUid, AssetDTO payload, String employeeId) {
-        Long clientId = clientRepository.findIdByClientUid(clientUid)
-                .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
-
         if(!ownershipValidator.canAccessClient(clientUid, employeeId)) {
-            throw new AccessDeniedException("Assigned advisor mismatch for client assets access");
+            throw new AccessDeniedException("Client not found or access denied");
         }
+
+        Long clientId = clientRepository.findIdByClientUid(clientUid)
+                .orElseThrow();
 
         AssetType assetType = assetTypeRepository.findById(payload.assetTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Asset Type not found with ID: " + payload.assetTypeId()));
@@ -60,17 +59,16 @@ public class AssetService {
 
     @Transactional
     public AssetDTO updateAsset(String clientUid, Long assetId, AssetDTO payload, String advisorEmployeeId) {
-        Asset existingAsset = assetRepository.findById(assetId)
-                .orElseThrow(() -> new ResourceNotFoundException("Asset not found"));
-
         if (!ownershipValidator.canAccessClient(clientUid, advisorEmployeeId)) {
-            throw new AccessDeniedException("Assigned advisor mismatch for client access");
+            throw new AccessDeniedException("Client not found or access denied");
         }
 
         if (!ownershipValidator.ownsAsset(clientUid, assetId)) {
-            throw new AccessDeniedException("Asset does not belong to this client");
+            throw new AccessDeniedException("Asset not found or access denied");
         }
 
+        Asset existingAsset = assetRepository.findById(assetId)
+                .orElseThrow();
         AssetType assetType = assetTypeRepository.findById(payload.assetTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Asset Type not found with ID: " + payload.assetTypeId()));
 
@@ -85,14 +83,11 @@ public class AssetService {
 
     @Transactional
     public void deleteAsset(String clientUid, Long assetId, String advisorEmployeeId) {
-        if (!clientRepository.existsByClientUid(clientUid)) {
-            throw new ResourceNotFoundException("Client not found");
-        }
         if (!ownershipValidator.canAccessClient(clientUid, advisorEmployeeId)) {
-            throw new AccessDeniedException("Assigned advisor mismatch for client access");
+            throw new AccessDeniedException("Client not found or access denied");
         }
         if (!ownershipValidator.ownsAsset(clientUid, assetId)) {
-            throw new AccessDeniedException("Asset not found or does not belong to this client");
+            throw new AccessDeniedException("Asset not found or access denied");
         }
 
         assetRepository.deleteById(assetId);

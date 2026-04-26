@@ -75,9 +75,9 @@ public class AssetFullstackIT {
 
     @Test
     @WithMockUser(username = "ADV_01", roles = "ADVISOR")
-    void getClientAssets_NotFound_WhenClientUidIsInvalid() throws Exception {
+    void getClientAssets_Forbidden_WhenClientUidIsInvalid() throws Exception {
         mockMvc.perform(get("/api/v1/clients/{clientUid}/assets", "INVALID_UID"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -126,7 +126,7 @@ public class AssetFullstackIT {
 
     @Test
     @WithMockUser(username = "ADV_01", roles = "ADVISOR")
-    void updateAsset_NotFound_WhenAssetIdDoesNotExist() throws Exception {
+    void updateAsset_Forbidden_WhenAssetIdDoesNotExist() throws Exception {
         AssetDTO updatePayload = new AssetDTO(
                 999L, "Valid Name", 10000, null, realEstateType.getId(), null
         );
@@ -134,7 +134,7 @@ public class AssetFullstackIT {
         mockMvc.perform(put("/api/v1/clients/{clientUid}/assets/{assetId}", testClient.getClientUid(), 999L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updatePayload)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test
