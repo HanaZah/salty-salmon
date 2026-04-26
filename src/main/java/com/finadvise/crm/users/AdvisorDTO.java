@@ -1,7 +1,6 @@
 package com.finadvise.crm.users;
 
 public record AdvisorDTO(
-        Long id,
         Integer version,
         String employeeId,
         String ico,

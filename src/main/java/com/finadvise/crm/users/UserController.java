@@ -28,9 +28,9 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "Advisor not found",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
-    @GetMapping("/{id}")
-    public AdvisorDTO getAdvisorById(@PathVariable Long id) {
-        return userService.getAdvisorById(id);
+    @GetMapping("/{employeeId}")
+    public AdvisorDTO getAdvisorById(@PathVariable String employeeId, Principal principal) {
+        return userService.getAdvisorByEmployeeId(employeeId, principal.getName());
     }
 
     @Operation(summary = "Create Admin", description = "Registers a new System Administrator. Requires ROLE_ADMIN.")

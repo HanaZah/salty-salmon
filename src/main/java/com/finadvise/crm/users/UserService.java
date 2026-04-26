@@ -1,6 +1,7 @@
 package com.finadvise.crm.users;
 
 import com.finadvise.crm.common.ObfuscatedIdGenerator;
+import com.finadvise.crm.common.OwnershipValidator;
 import com.finadvise.crm.common.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -27,6 +28,7 @@ public class UserService implements UserDetailsService {
     private final AdvisorMapper advisorMapper;
     private final AdminMapper adminMapper;
     private final ObfuscatedIdGenerator obfuscatedIdGenerator;
+    private final OwnershipValidator ownershipValidator;
 
     /**
      * Creates a new advisor. Restricted to administrators.
@@ -88,7 +90,7 @@ public class UserService implements UserDetailsService {
     @PreAuthorize("hasRole('ADMIN')")
     public void assignManager(Long advisorId, Long newManagerId) {
         Advisor advisor = advisorRepository.findById(advisorId)
-                .orElseThrow(() -> new IllegalArgumentException("Advisor not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Advisor not found"));
 
         if (newManagerId == null) {
             advisor.setManager(null);
@@ -97,7 +99,7 @@ public class UserService implements UserDetailsService {
         }
 
         Advisor newManager = advisorRepository.findById(newManagerId)
-                .orElseThrow(() -> new IllegalArgumentException("Manager not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
 
         validateNoCircularReference(advisor, newManager);
 
@@ -114,14 +116,14 @@ public class UserService implements UserDetailsService {
         Objects.requireNonNull(newManager, "New manager cannot be null");
 
         if (Objects.equals(advisor.getId(), newManager.getId())) {
-            throw new IllegalStateException("An advisor cannot manage themselves.");
+            throw new CircularManagementException("An advisor cannot manage themselves.");
         }
 
         Advisor currentAncestor = newManager.getManager();
 
         while (currentAncestor != null) {
             if (Objects.equals(currentAncestor.getId(), advisor.getId())) {
-                throw new IllegalStateException(
+                throw new CircularManagementException(
                         String.format("Circular reference detected: %s %s is already managing someone in %s %s's chain.",
                                 advisor.getFirstName(), advisor.getLastName(),
                                 newManager.getFirstName(), newManager.getLastName())
@@ -137,7 +139,7 @@ public class UserService implements UserDetailsService {
     @Transactional
     public void changePassword(String employeeId, ChangePasswordRequestDTO request) {
         User user = userRepository.findByEmployeeId(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(); // the employeeId comes from principal, so it's guaranteed to be present
 
         if (!passwordEncoder.matches(request.oldPassword(), user.getPasswordHash())) {
             throw new InvalidPasswordException("Incorrect current password.");
@@ -158,7 +160,7 @@ public class UserService implements UserDetailsService {
     @Transactional
     public void updateProfile(String employeeId, UpdateProfileRequestDTO request) {
         User user = userRepository.findByEmployeeId(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(); // the employeeId comes from principal, so it's guaranteed to be present
 
         if (!user.getVersion().equals(request.version())) {
             throw new ObjectOptimisticLockingFailureException(User.class, Objects.requireNonNull(user.getId()));
@@ -188,9 +190,14 @@ public class UserService implements UserDetailsService {
         return new CustomUserDetails(user);
     }
 
-    public AdvisorDTO getAdvisorById(Long id) {
+    public AdvisorDTO getAdvisorByEmployeeId(String employeeId, String requesterId) {
+        if(!ownershipValidator.canAccessUser(employeeId, requesterId)) {
+            throw new ResourceNotFoundException("Advisor not found or access denied.");
+        }
+
         return advisorMapper.toDto(
-                advisorRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Advisor not found")));
+                advisorRepository.findByEmployeeId(employeeId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Advisor not found or access denied.")));
     }
 
     public List<String> getActiveAdminEmails() {

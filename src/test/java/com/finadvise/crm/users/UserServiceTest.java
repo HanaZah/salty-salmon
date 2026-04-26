@@ -1,7 +1,6 @@
 package com.finadvise.crm.users;
 
 import com.finadvise.crm.common.ObfuscatedIdGenerator;
-import com.finadvise.crm.common.ResourceNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -35,6 +34,10 @@ class UserServiceTest {
     private AdvisorMapper advisorMapper;
     @Mock
     private ObfuscatedIdGenerator obfuscatedIdGenerator;
+    @Mock
+    private AdminRepository adminRepository;
+    @Mock
+    private AdminMapper adminMapper;
 
     @InjectMocks
     private UserService userService;
@@ -65,9 +68,8 @@ class UserServiceTest {
         CreateAdvisorRequestDTO request = new CreateAdvisorRequestDTO(
                 "John", "Doe", "12345678", "john@finadvise.com", "1234567890", "Pass123"
                 );
-        Advisor savedAdvisor = Advisor.builder().id(100L).build();
+        Advisor savedAdvisor = Advisor.builder().employeeId("EMP-100").build();
         AdvisorDTO expectedDto = new AdvisorDTO(
-                100L,              // id
                 0,                    // version
                 "EMP-100",            // employeeId
                 "12345678",           // ico
@@ -90,7 +92,7 @@ class UserServiceTest {
         AdvisorDTO result = userService.createAdvisor(request);
 
         assertThat(result).isNotNull();
-        assertThat(result.id()).isEqualTo(100L);
+        assertThat(result.employeeId()).isEqualTo("EMP-100");
 
         // Capture the exact entity passed to the repository to verify internal mapping
         verify(advisorRepository).save(advisorCaptor.capture());
@@ -165,18 +167,6 @@ class UserServiceTest {
         assertThat(savedEmployee.getManager()).isNotNull();
         assertThat(savedEmployee.getManager().getId()).isEqualTo(1L);
     }
-
-    @Test
-    void getAdvisorById_ThrowsResourceNotFound_WhenIdDoesNotExist() {
-        when(advisorRepository.findById(999L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> userService.getAdvisorById(999L))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("Advisor not found");
-
-        verify(advisorMapper, never()).toDto(any());
-    }
-
 
     @Test
     void changePassword_UpdatesPassword_WhenOldPasswordIsCorrect() {

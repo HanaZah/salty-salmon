@@ -9,4 +9,6 @@ public interface AdminRepository extends JpaRepository<Admin, Long> {
 
     @Query("SELECT u.email FROM User u WHERE TYPE(u) = Admin AND u.isActive = true")
     List<String> findActiveEmails();
+
+    Boolean existsByEmployeeId(String employeeId);
 }

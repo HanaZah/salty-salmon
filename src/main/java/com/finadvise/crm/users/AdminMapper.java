@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 public class AdminMapper {
     public AdminDTO toDto(Admin admin) {
         return new AdminDTO(
-                admin.getId(),
                 admin.getEmployeeId(),
                 admin.getFirstName(),
                 admin.getLastName()

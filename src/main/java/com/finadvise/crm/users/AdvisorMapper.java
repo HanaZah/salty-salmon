@@ -19,7 +19,6 @@ public class AdvisorMapper {
         Long managerId = advisor.getManager() != null ? advisor.getManager().getId() : null;
 
         return new AdvisorDTO(
-                advisor.getId(),
                 advisor.getVersion(),
                 advisor.getEmployeeId(),
                 advisor.getIco(),
