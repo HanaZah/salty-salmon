@@ -1,8 +1,7 @@
 package com.finadvise.crm.addresses;
 
-import jakarta.annotation.PostConstruct;
+import com.finadvise.crm.common.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AddressService {
 
-    // Spring's Dependency Injection handles wiring these up automatically
     private final CityRepository cityRepository;
     private final StreetRepository streetRepository;
     private final AddressRepository addressRepository;
@@ -47,7 +45,6 @@ public class AddressService {
                     return streetRepository.save(newStreet);
                 });
 
-        // 3. Find or Create Address
         Address address = addressRepository.findByHouseNumberAndStreetId(
                             dto.houseNumber(), street.getId())
                 .orElseGet(() -> {
@@ -58,5 +55,11 @@ public class AddressService {
                     return addressRepository.save(newAddress);
                 });
         return addressMapper.toDto(address);
+    }
+
+    public AddressDTO getAddressById(Long id) {
+        return addressRepository.findById(id)
+                .map(addressMapper::toDto)
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
     }
 }
