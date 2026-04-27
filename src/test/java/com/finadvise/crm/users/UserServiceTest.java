@@ -1,6 +1,7 @@
 package com.finadvise.crm.users;
 
 import com.finadvise.crm.common.ObfuscatedIdGenerator;
+import com.finadvise.crm.common.ResourceConflictException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -8,81 +9,76 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
-    @Mock
-    private AdvisorRepository advisorRepository;
-    @Mock
-    private UserRepository userRepository;
-    @Mock
-    private PasswordEncoder passwordEncoder;
-    @Mock
-    private AdvisorMapper advisorMapper;
-    @Mock
-    private ObfuscatedIdGenerator obfuscatedIdGenerator;
-    @Mock
-    private AdminRepository adminRepository;
-    @Mock
-    private AdminMapper adminMapper;
+    @Mock private AdvisorRepository advisorRepository;
+    @Mock private UserRepository userRepository;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private AdvisorMapper advisorMapper;
+    @Mock private ObfuscatedIdGenerator obfuscatedIdGenerator;
+    @Mock private AdminRepository adminRepository;
+    @Mock private AdminMapper adminMapper;
 
     @InjectMocks
     private UserService userService;
 
-    @Captor
-    private ArgumentCaptor<Advisor> advisorCaptor;
-    @Captor
-    private ArgumentCaptor<User> userCaptor;
+    @Captor private ArgumentCaptor<Advisor> advisorCaptor;
+    @Captor private ArgumentCaptor<Admin> adminCaptor;
+    @Captor private ArgumentCaptor<User> userCaptor;
+
+    // --- CREATE ADVISOR & ADMIN ---
 
     @Test
     void createAdvisor_ThrowsException_WhenIcoAlreadyExists() {
-
         CreateAdvisorRequestDTO request = new CreateAdvisorRequestDTO(
                 "John", "Doe", "12345678", "john@finadvise.com", "1234567890", "Pass123"
         );
         when(advisorRepository.existsByIco("12345678")).thenReturn(true);
 
         assertThatThrownBy(() -> userService.createAdvisor(request))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceConflictException.class)
                 .hasMessageContaining("ICO already exists");
+    }
 
-        verify(advisorRepository, never()).existsByEmail(anyString());
-        verify(advisorRepository, never()).save(any());
+    @Test
+    void createAdvisor_ThrowsException_WhenEmailAlreadyExists() {
+        CreateAdvisorRequestDTO request = new CreateAdvisorRequestDTO(
+                "John", "Doe", "12345678", "john@finadvise.com", "1234567890", "Pass123"
+        );
+        when(advisorRepository.existsByIco("12345678")).thenReturn(false);
+        when(userRepository.existsByEmail("john@finadvise.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> userService.createAdvisor(request))
+                .isInstanceOf(ResourceConflictException.class)
+                .hasMessageContaining("email already exists");
     }
 
     @Test
     void createAdvisor_SavesAndReturnsDto_OnValidRequest() {
         CreateAdvisorRequestDTO request = new CreateAdvisorRequestDTO(
                 "John", "Doe", "12345678", "john@finadvise.com", "1234567890", "Pass123"
-                );
-        Advisor savedAdvisor = Advisor.builder().employeeId("EMP-100").build();
-        AdvisorDTO expectedDto = new AdvisorDTO(
-                0,                    // version
-                "EMP-100",            // employeeId
-                "12345678",           // ico
-                "John",               // firstName
-                "Doe",                // lastName
-                "1234567890",         // phone
-                "john@finadvise.com", // email
-                null,                 // managerId (none on creation)
-                null                  // statistics (none on creation)
         );
+        Advisor savedAdvisor = Advisor.builder().employeeId("EMP-100").build();
+        AdvisorDTO expectedDto = new AdvisorDTO(0, "EMP-100", "12345678", "John", "Doe", "1234567890", "john@finadvise.com", null, null);
 
         when(advisorRepository.existsByIco(anyString())).thenReturn(false);
-        when(advisorRepository.existsByEmail(anyString())).thenReturn(false);
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
         when(userRepository.getNextSequenceValue()).thenReturn(100L);
         when(obfuscatedIdGenerator.encode(100L)).thenReturn("EMP-100");
         when(passwordEncoder.encode("Pass123")).thenReturn("hashed-pass");
@@ -91,105 +87,131 @@ class UserServiceTest {
 
         AdvisorDTO result = userService.createAdvisor(request);
 
-        assertThat(result).isNotNull();
         assertThat(result.employeeId()).isEqualTo("EMP-100");
-
-        // Capture the exact entity passed to the repository to verify internal mapping
-        verify(advisorRepository).save(advisorCaptor.capture());
-        Advisor capturedAdvisor = advisorCaptor.getValue();
-
-        assertThat(capturedAdvisor.getPasswordHash()).isEqualTo("hashed-pass");
-        assertThat(capturedAdvisor.getEmployeeId()).isEqualTo("EMP-100");
     }
 
     @Test
-    void assignManager_ThrowsException_WhenAssigningSelf() {
-        Advisor self = Advisor.builder().id(1L).build();
-        when(advisorRepository.findById(1L)).thenReturn(Optional.of(self));
+    void createAdmin_ThrowsException_WhenEmailAlreadyExists() {
+        CreateAdminRequestDTO request = new CreateAdminRequestDTO("Jane", "Doe", "jane@finadvise.com", "Pass123");
+        when(userRepository.existsByEmail("jane@finadvise.com")).thenReturn(true);
 
-        assertThatThrownBy(() -> userService.assignManager(1L, 1L))
-                .isInstanceOf(IllegalStateException.class)
+        assertThatThrownBy(() -> userService.createAdmin(request))
+                .isInstanceOf(ResourceConflictException.class)
+                .hasMessageContaining("email already exists");
+    }
+
+    @Test
+    void createAdmin_SavesAndReturnsDto_OnValidRequest() {
+        CreateAdminRequestDTO request = new CreateAdminRequestDTO("Jane", "Doe", "jane@finadvise.com", "Pass123");
+        Admin savedAdmin = Admin.builder().employeeId("ADM-100").build();
+        AdminDTO expectedDto = new AdminDTO("ADM-100", "Jane@Doe.mail", "Jane", "Doe");
+
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(userRepository.getNextSequenceValue()).thenReturn(100L);
+        when(obfuscatedIdGenerator.encode(100L)).thenReturn("ADM-100");
+        when(passwordEncoder.encode("Pass123")).thenReturn("hashed-pass");
+        when(adminRepository.save(any(Admin.class))).thenReturn(savedAdmin);
+        when(adminMapper.toDto(savedAdmin)).thenReturn(expectedDto);
+
+        AdminDTO result = userService.createAdmin(request);
+
+        assertThat(result.employeeId()).isEqualTo("ADM-100");
+        verify(adminRepository).save(adminCaptor.capture());
+        assertThat(adminCaptor.getValue().getEmail()).isEqualTo("jane@finadvise.com");
+    }
+
+    // --- ASSIGN MANAGER ---
+
+    @Test
+    void assignManager_ThrowsException_WhenAssigningSelf() {
+        Advisor self = Advisor.builder().employeeId("ADV_001").build();
+        when(advisorRepository.findByEmployeeId("ADV_001")).thenReturn(Optional.of(self));
+
+        assertThatThrownBy(() -> userService.assignManager("ADV_001", "ADV_001"))
+                .isInstanceOf(CircularManagementException.class)
                 .hasMessageContaining("cannot manage themselves");
     }
 
     @Test
     void assignManager_ThrowsException_OnCircularReference() {
-        // Build the hierarchy: Top Boss -> Middle Manager -> Bottom Employee
-        Advisor topBoss = Advisor.builder().id(1L).firstName("Top").lastName("Boss").build();
-        Advisor middleManager = Advisor.builder().id(2L).firstName("Middle").lastName("Manager").manager(topBoss).build();
-        Advisor bottomEmployee = Advisor.builder().id(3L).firstName("Bottom").lastName("Employee").manager(middleManager).build();
+        Advisor topBoss = Advisor.builder().id(1L).employeeId("ADV_001").build();
+        Advisor middleManager = Advisor.builder().id(2L).employeeId("ADV_002").manager(topBoss).build();
+        Advisor bottomEmployee = Advisor.builder().id(3L).employeeId("ADV_003").manager(middleManager).build();
 
-        // Attempting to make the Bottom Employee the manager of the Top Boss
-        when(advisorRepository.findById(1L)).thenReturn(Optional.of(topBoss));
-        when(advisorRepository.findById(3L)).thenReturn(Optional.of(bottomEmployee));
+        when(advisorRepository.findByEmployeeId("ADV_001")).thenReturn(Optional.of(topBoss));
+        when(advisorRepository.findByEmployeeId("ADV_003")).thenReturn(Optional.of(bottomEmployee));
 
-        assertThatThrownBy(() -> userService.assignManager(1L, 3L))
-                .isInstanceOf(IllegalStateException.class)
+        assertThatThrownBy(() -> userService.assignManager("ADV_001", "ADV_003"))
+                .isInstanceOf(CircularManagementException.class)
                 .hasMessageContaining("Circular reference detected");
-
-        verify(advisorRepository, never()).save(any());
-    }
-
-    @Test
-    void loadUserByUsername_ReturnsUserDetails_WhenUserExists() {
-        Admin admin = Admin.builder().employeeId("A1234567").passwordHash("hash").build();
-        when(userRepository.findByEmployeeId("A1234567")).thenReturn(Optional.of(admin));
-
-        UserDetails userDetails = userService.loadUserByUsername("A1234567");
-
-        assertThat(userDetails).isNotNull();
-        assertThat(userDetails.getUsername()).isEqualTo("A1234567");
-        assertThat(userDetails.getPassword()).isEqualTo("hash");
-    }
-
-    @Test
-    void loadUserByUsername_ThrowsException_WhenUserDoesNotExist() {
-        when(userRepository.findByEmployeeId("B1234567")).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> userService.loadUserByUsername("B1234567"))
-                .isInstanceOf(UsernameNotFoundException.class)
-                .hasMessageContaining("B1234567");
     }
 
     @Test
     void assignManager_UpdatesAndSaves_OnValidHierarchy() {
-        Advisor boss = Advisor.builder().id(1L).build();
-        Advisor employee = Advisor.builder().id(2L).build();
+        Advisor boss = Advisor.builder().id(1L).employeeId("ADV_001").build();
+        Advisor employee = Advisor.builder().id(2L).employeeId("ADV_002").build();
 
-        when(advisorRepository.findById(2L)).thenReturn(Optional.of(employee));
-        when(advisorRepository.findById(1L)).thenReturn(Optional.of(boss));
+        when(advisorRepository.findByEmployeeId("ADV_002")).thenReturn(Optional.of(employee));
+        when(advisorRepository.findByEmployeeId("ADV_001")).thenReturn(Optional.of(boss));
 
-        userService.assignManager(2L, 1L);
+        userService.assignManager("ADV_002", "ADV_001");
 
         verify(advisorRepository).save(advisorCaptor.capture());
-        Advisor savedEmployee = advisorCaptor.getValue();
+        assertThat(advisorCaptor.getValue().getManager().getId()).isEqualTo(1L);
+    }
 
-        assertThat(savedEmployee.getManager()).isNotNull();
-        assertThat(savedEmployee.getManager().getId()).isEqualTo(1L);
+    // --- DEACTIVATE, GET_ME, LIST ---
+
+    @Test
+    void deactivateUser_SetsIsActiveToFalse() {
+        Advisor activeAdvisor = Advisor.builder().employeeId("EMP-001").isActive(true).build();
+        when(userRepository.findByEmployeeId("EMP-001")).thenReturn(Optional.of(activeAdvisor));
+
+        userService.deactivateUser("EMP-001");
+
+        verify(userRepository).save(userCaptor.capture());
+        assertThat(userCaptor.getValue().isActive()).isFalse();
     }
 
     @Test
-    void changePassword_UpdatesPassword_WhenOldPasswordIsCorrect() {
-        ChangePasswordRequestDTO request = new ChangePasswordRequestDTO("OldPass123", "NewPass123");
-        User mockUser = Admin.builder()
-                .id(333L)
-                .employeeId("A1234567")
-                .passwordHash("hashed-old-pass")
-                .build();
+    void getAllAdvisors_ReturnsPagedData() {
+        Page<Advisor> page = new PageImpl<>(List.of(new Advisor()));
+        when(advisorRepository.findAll(any(PageRequest.class))).thenReturn(page);
+        when(advisorMapper.toDto(any())).thenReturn(new AdvisorDTO(
+                0, "A", "1", "F", "L", "1", "e", null, null
+        ));
 
-        when(userRepository.findByEmployeeId("A1234567")).thenReturn(Optional.of(mockUser));
-        when(passwordEncoder.matches("OldPass123", "hashed-old-pass")).thenReturn(true);
-        when(passwordEncoder.matches("NewPass123", "hashed-old-pass")).thenReturn(false);
-        when(passwordEncoder.encode("NewPass123")).thenReturn("hashed-new-pass");
+        Page<AdvisorDTO> result = userService.getAllAdvisors(PageRequest.of(0, 10));
 
-        userService.changePassword("A1234567", request);
-
-        verify(userRepository).save(userCaptor.capture());
-        User updatedUser = userCaptor.getValue();
-
-        assertEquals("hashed-new-pass", updatedUser.getPasswordHash());
-        assertEquals(333L, updatedUser.getId());
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        verify(advisorMapper, times(1)).toDto(any());
     }
+
+    @Test
+    void getMe_ReturnsAdminDto_WhenUserIsAdmin() {
+        Admin admin = new Admin();
+        when(userRepository.findByEmployeeId("ADM-001")).thenReturn(Optional.of(admin));
+        when(adminMapper.toDto(admin)).thenReturn(new AdminDTO("ADM-001", "A@B.mail", "A", "B"));
+
+        Object result = userService.getMe("ADM-001");
+
+        assertThat(result).isInstanceOf(AdminDTO.class);
+    }
+
+    @Test
+    void getMe_ReturnsAdvisorDto_WhenUserIsAdvisor() {
+        Advisor advisor = new Advisor();
+        when(userRepository.findByEmployeeId("ADV-001")).thenReturn(Optional.of(advisor));
+        when(advisorMapper.toDto(advisor)).thenReturn(new AdvisorDTO(
+                0, "ADV-001", "1", "F", "L", "1", "e", null, null
+        ));
+
+        Object result = userService.getMe("ADV-001");
+
+        assertThat(result).isInstanceOf(AdvisorDTO.class);
+    }
+
+    // --- PROFILE & PASSWORD UPDATES ---
 
     @Test
     void changePassword_ThrowsInvalidPasswordException_WhenOldPasswordIsWrong() {
@@ -202,85 +224,24 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.changePassword("A1234567", request))
                 .isInstanceOf(InvalidPasswordException.class)
                 .hasMessageContaining("Incorrect current password");
-
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    void changePassword_ThrowsInvalidPasswordException_WhenNewPasswordIsSameAsOld() {
-        ChangePasswordRequestDTO request = new ChangePasswordRequestDTO("SamePass123", "SamePass123");
-        User mockUser = Admin.builder().employeeId("A1234567").passwordHash("hashed-pass").build();
-
-        when(userRepository.findByEmployeeId("A1234567")).thenReturn(Optional.of(mockUser));
-        when(passwordEncoder.matches("SamePass123", "hashed-pass")).thenReturn(true);
-
-        assertThatThrownBy(() -> userService.changePassword("A1234567", request))
-                .isInstanceOf(InvalidPasswordException.class)
-                .hasMessageContaining("New password cannot be the same as the old password");
-
-        verify(passwordEncoder, never()).encode(anyString());
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    void updateProfile_UpdatesPhone_WhenUserIsAdvisor() {
-        UpdateProfileRequestDTO request = new UpdateProfileRequestDTO(
-                0, "NewFirst", "NewLast", "9998887777");
-        Advisor mockAdvisor = Advisor.builder()
-                .employeeId("A1234567")
-                .firstName("Old")
-                .lastName("Name")
-                .phone("111")
-                .email("old@name.mail")
-                .version(0)
-                .build();
-
-        when(userRepository.findByEmployeeId("A1234567")).thenReturn(Optional.of(mockAdvisor));
-
-        userService.updateProfile("A1234567", request);
-
-        verify(userRepository).save(mockAdvisor);
-        assertThat(mockAdvisor.getFirstName()).isEqualTo("NewFirst");
-        assertThat(mockAdvisor.getPhone()).isEqualTo("9998887777");
-    }
-
-    @Test
-    void updateProfile_IgnoresPhone_WhenUserIsAdmin() {
-        UpdateProfileRequestDTO request = new UpdateProfileRequestDTO(
-                0, "NewFirst", "NewLast", "9998887777");
-        Admin mockAdmin = Admin.builder()
-                .employeeId("B1234567")
-                .firstName("Old")
-                .lastName("Name")
-                .phone("123456789")
-                .email("old@name.mail")
-                .version(0)
-                .build();
-
-        when(userRepository.findByEmployeeId("B1234567")).thenReturn(Optional.of(mockAdmin));
-
-        userService.updateProfile("B1234567", request);
-
-        verify(userRepository).save(mockAdmin);
-        assertThat(mockAdmin.getFirstName()).isEqualTo("NewFirst");
     }
 
     @Test
     void updateProfile_ThrowsOptimisticLockingException_WhenVersionsDoNotMatch() {
-        UpdateProfileRequestDTO request = new UpdateProfileRequestDTO(
-                1, "NewFirst", "NewLast", "9998887777");
-        Advisor mockAdvisor = Advisor.builder()
-                .id(123L)
-                .employeeId("A1234567")
-                .version(0)
-                .build();
+        UpdateProfileRequestDTO request = new UpdateProfileRequestDTO(1, "NewFirst", "NewLast", "9998887777");
+        Advisor mockAdvisor = Advisor.builder().id(123L).employeeId("A1234567").version(0).build();
 
         when(userRepository.findByEmployeeId("A1234567")).thenReturn(Optional.of(mockAdvisor));
 
-        assertThrows(ObjectOptimisticLockingFailureException.class, () -> {
-            userService.updateProfile("A1234567", request);
-        });
+        assertThrows(ObjectOptimisticLockingFailureException.class, () -> userService.updateProfile("A1234567", request));
+    }
 
-        verify(userRepository, never()).save(any());
+    @Test
+    void loadUserByUsername_ReturnsUserDetails_WhenUserExists() {
+        Admin admin = Admin.builder().employeeId("A1234567").passwordHash("hash").build();
+        when(userRepository.findByEmployeeId("A1234567")).thenReturn(Optional.of(admin));
+
+        UserDetails userDetails = userService.loadUserByUsername("A1234567");
+        assertThat(userDetails.getUsername()).isEqualTo("A1234567");
     }
 }

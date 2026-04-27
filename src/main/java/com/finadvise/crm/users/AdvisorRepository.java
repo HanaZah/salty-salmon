@@ -9,8 +9,6 @@ import java.util.Optional;
 public interface AdvisorRepository extends JpaRepository<Advisor, Long> {
     Boolean existsByIco(String ico);
 
-    Boolean existsByEmail(String email);
-
     @Query("SELECT a.id FROM Advisor a WHERE a.employeeId = :employeeId")
     Optional<Long> findIdByEmployeeId(@Param("employeeId") String employeeId);
 

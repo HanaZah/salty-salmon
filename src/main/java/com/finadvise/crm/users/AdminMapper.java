@@ -7,6 +7,7 @@ public class AdminMapper {
     public AdminDTO toDto(Admin admin) {
         return new AdminDTO(
                 admin.getEmployeeId(),
+                admin.getEmail(),
                 admin.getFirstName(),
                 admin.getLastName()
         );

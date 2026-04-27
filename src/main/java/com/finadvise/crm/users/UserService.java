@@ -2,9 +2,12 @@ package com.finadvise.crm.users;
 
 import com.finadvise.crm.common.ObfuscatedIdGenerator;
 import com.finadvise.crm.common.OwnershipValidator;
+import com.finadvise.crm.common.ResourceConflictException;
 import com.finadvise.crm.common.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -37,10 +40,10 @@ public class UserService implements UserDetailsService {
     @PreAuthorize("hasRole('ADMIN')")
     public AdvisorDTO createAdvisor(CreateAdvisorRequestDTO request) {
         if (advisorRepository.existsByIco(request.ico())) {
-            throw new IllegalArgumentException("An advisor with this ICO already exists.");
+            throw new ResourceConflictException("An advisor with this ICO already exists.");
         }
-        if (advisorRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("A user with this email already exists.");
+        if (userRepository.existsByEmail(request.email())) {
+            throw new ResourceConflictException("A user with this email already exists.");
         }
 
         Long nextId = userRepository.getNextSequenceValue();
@@ -67,6 +70,9 @@ public class UserService implements UserDetailsService {
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public AdminDTO createAdmin(CreateAdminRequestDTO request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new ResourceConflictException("A user with this email already exists.");
+        }
 
         Long nextId = userRepository.getNextSequenceValue();
         String employeeId = obfuscatedIdGenerator.encode(nextId);
@@ -75,6 +81,7 @@ public class UserService implements UserDetailsService {
                 .id(nextId)
                 .employeeId(employeeId)
                 .passwordHash(passwordEncoder.encode(request.rawPassword()))
+                .email(request.email())
                 .firstName(request.firstName())
                 .lastName(request.lastName())
                 .isActive(true)
@@ -88,18 +95,18 @@ public class UserService implements UserDetailsService {
      */
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
-    public void assignManager(Long advisorId, Long newManagerId) {
-        Advisor advisor = advisorRepository.findById(advisorId)
-                .orElseThrow(() -> new ResourceNotFoundException("Advisor not found"));
+    public void assignManager(String employeeId, String managerEmployeeId) {
+        Advisor advisor = advisorRepository.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Advisor not found or access denied"));
 
-        if (newManagerId == null) {
+        if (managerEmployeeId == null) {
             advisor.setManager(null);
             advisorRepository.save(advisor);
             return;
         }
 
-        Advisor newManager = advisorRepository.findById(newManagerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+        Advisor newManager = advisorRepository.findByEmployeeId(managerEmployeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found or access denied"));
 
         validateNoCircularReference(advisor, newManager);
 
@@ -202,5 +209,32 @@ public class UserService implements UserDetailsService {
 
     public List<String> getActiveAdminEmails() {
         return adminRepository.findActiveEmails();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<AdvisorDTO> getAllAdvisors(Pageable pageable) {
+        // Automatically translates to efficient paginated SQL queries
+        return advisorRepository.findAll(pageable).map(advisorMapper::toDto);
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deactivateUser(String employeeId) {
+        User user = userRepository.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setActive(false);
+        userRepository.save(user);
+    }
+
+    public Object getMe(String employeeId) {
+        User user = userRepository.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (user instanceof Advisor advisor) {
+            return advisorMapper.toDto(advisor);
+        } else if (user instanceof Admin admin) {
+            return adminMapper.toDto(admin);
+        }
+        throw new IllegalStateException("Unknown user type encountered in system.");
     }
 }

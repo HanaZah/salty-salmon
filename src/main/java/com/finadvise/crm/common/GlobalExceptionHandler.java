@@ -110,4 +110,12 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.of(problem).build();
     }
+
+    @ExceptionHandler(ResourceConflictException.class)
+    public ResponseEntity<ProblemDetail> handleResourceConflict(ResourceConflictException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problem.setTitle("Resource Conflict");
+        problem.setType(URI.create(BASE_URL + "resource-conflict"));
+        return ResponseEntity.of(problem).build();
+    }
 }

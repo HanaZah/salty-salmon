@@ -59,37 +59,4 @@ class AdvisorRepositoryIT {
         // Assert
         assertThat(exists).isFalse();
     }
-
-    @Test
-    void existsByEmail_ReturnsTrue_WhenEmailExists() {
-        // Arrange
-        Advisor advisor = Advisor.builder()
-                .id(2L)
-                .employeeId("B1234567")
-                .passwordHash("hash")
-                .firstName("Jane")
-                .lastName("Smith")
-                .phone("2345678901")
-                .email("jane.smith@finadvise.com")
-                .ico("87654321")
-                .isActive(true)
-                .build();
-
-        entityManager.persistAndFlush(advisor);
-
-        // Act
-        boolean exists = advisorRepository.existsByEmail("jane.smith@finadvise.com");
-
-        // Assert
-        assertThat(exists).isTrue();
-    }
-
-    @Test
-    void existsByEmail_ReturnsFalse_WhenEmailDoesNotExist() {
-        // Act
-        boolean exists = advisorRepository.existsByEmail("false@email.com");
-
-        // Assert
-        assertThat(exists).isFalse();
-    }
 }

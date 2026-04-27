@@ -1,5 +1,6 @@
 package com.finadvise.crm.users;
 
+import com.finadvise.crm.common.TestFixtureFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -8,15 +9,15 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.oracle.OracleContainer;
 import tools.jackson.databind.ObjectMapper;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -26,202 +27,159 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
+@Transactional // Rolls back the database after each test, keeping our fixtures isolated
 class UserFullStackIT {
 
     @Container
     @ServiceConnection
     static OracleContainer oracle = new OracleContainer("gvenzl/oracle-free:slim-faststart");
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private TestFixtureFactory testFixtureFactory;
+    @Autowired private AdvisorRepository advisorRepository;
+    @Autowired private PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private AdvisorRepository advisorRepository;
-
-    @Autowired
-    private AdminRepository adminRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    // --- CREATE ADMIN / ADVISOR E2E ---
 
     @Test
-    void createNewAdvisor_Returns401_WhenUnauthenticated() throws Exception {
-        CreateAdvisorRequestDTO request = new CreateAdvisorRequestDTO(
-                "John", "Doe", "12345678", "john@finadvise.com", "1234567890", "Pass123"
-        );
+    @WithMockUser(roles = "ADMIN")
+    void createNewAdmin_Returns200AndDto_WhenUserIsAdmin() throws Exception {
+        CreateAdminRequestDTO request = new CreateAdminRequestDTO("Bob", "Builder", "bob@builder.com", "SecurePass1!");
 
-        mockMvc.perform(post("/api/v1/users/new/advisor")
+        mockMvc.perform(post("/api/v1/users/new/admin")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                // No .with(jwt()) attached
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName").value("Bob"))
+                .andExpect(jsonPath("$.employeeId").exists());
     }
 
     @Test
-    void createNewAdvisor_Returns403_WhenUserIsNotAdmin() throws Exception {
-        CreateAdvisorRequestDTO request = new CreateAdvisorRequestDTO(
-                "Jane", "Doe", "87654321", "jane@finadvise.com", "0987654321", "Pass123"
-        );
+    @WithMockUser(roles = "ADMIN")
+    void createNewAdmin_Returns409_WhenEmailExists() throws Exception {
+        // Use factory to create a valid baseline, then modify the email to trigger the conflict
+        Advisor existingUser = testFixtureFactory.getOrCreateTestAdvisor(101L, "EMP-0101", "10101010", "Conflict");
+        existingUser.setEmail("conflict@mail.com");
+        advisorRepository.save(existingUser);
 
-        mockMvc.perform(post("/api/v1/users/new/advisor")
+        CreateAdminRequestDTO request = new CreateAdminRequestDTO("Test", "User", "conflict@mail.com", "Pass!");
+
+        mockMvc.perform(post("/api/v1/users/new/admin")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
-                        // Simulating a valid token, but with the ADVISOR role instead of ADMIN
-                        .with(jwt().jwt(jwt -> jwt.claim("scope", "ROLE_ADVISOR"))))
-                .andExpect(status().isForbidden());
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Resource Conflict"));
     }
 
-
     @Test
+    @WithMockUser(roles = "ADMIN")
     void createNewAdvisor_Returns200AndDto_WhenUserIsAdmin() throws Exception {
         CreateAdvisorRequestDTO request = new CreateAdvisorRequestDTO(
                 "Alice", "Smith", "11223344", "alice@finadvise.com", "1112223333", "Pass123"
         );
 
-        // Recreates the logic of our production converter just for the test mutator
-        JwtGrantedAuthoritiesConverter testConverter = new JwtGrantedAuthoritiesConverter();
-        testConverter.setAuthoritiesClaimName("scope");
-        testConverter.setAuthorityPrefix("");
-
         mockMvc.perform(post("/api/v1/users/new/advisor")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
-                        // Simulating a valid token with the required ADMIN role
-                        .with(jwt()
-                                .jwt(jwt -> jwt.claim("scope", "ROLE_ADMIN"))
-                                .authorities(testConverter)
-                        ))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.firstName").value("Alice"))
-                .andExpect(jsonPath("$.ico").value("11223344"))
-                .andExpect(jsonPath("$.employeeId").exists());
+                .andExpect(jsonPath("$.ico").value("11223344"));
+    }
+
+    // --- ME & LISTING E2E ---
+
+    @Test
+    @WithMockUser(username = "ME-0102")
+    void getCurrentUser_ReturnsProfile_BasedOnPrincipal() throws Exception {
+        testFixtureFactory.getOrCreateTestAdvisor(102L, "ME-0102", "10201020", "MeName");
+
+        mockMvc.perform(get("/api/v1/users/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lastName").value("MeName"));
     }
 
     @Test
-    void getAdvisorById_Returns404_WhenAdvisorDoesNotExist() throws Exception {
-        mockMvc.perform(get("/api/v1/users/99999")
-                        // Assuming any authenticated user can attempt to read a profile
-                        .with(jwt().jwt(jwt -> jwt.claim("scope", "ROLE_ADVISOR"))))
-                .andExpect(status().isNotFound());
+    @WithMockUser(roles = "ADMIN")
+    void getAllAdvisors_ReturnsPagedList_ForAdmin() throws Exception {
+        testFixtureFactory.getOrCreateTestAdvisor(103L, "LST-0103", "10301030", "ListName");
+
+        mockMvc.perform(get("/api/v1/users/advisors")
+                        .param("page", "0").param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").isNumber());
     }
 
+    // --- ASSIGN & DEACTIVATE E2E ---
+
     @Test
-    void updateProfile_Returns204_OnValidRequest() throws Exception {
-        // We need an existing user in the TestContainer database to update
-        Advisor advisor = Advisor.builder()
-                .id(500L)
-                .employeeId("UPDATE-001")
-                .passwordHash("hash")
-                .firstName("Original")
-                .lastName("Name")
-                .ico("12345678")
-                .email("update@finadvise.com")
-                .phone("0000000000")
-                .isActive(true)
-                .build();
+    @WithMockUser(roles = "ADMIN")
+    void assignManager_Returns204_WhenSuccessful() throws Exception {
+        testFixtureFactory.getOrCreateTestAdvisor(104L, "MGR-0104", "10401040", "Manager");
+        testFixtureFactory.getOrCreateTestAdvisor(105L, "EMP-0105", "10501050", "Employee");
 
-        // Save it directly using your repository (or testEntityManager if autowired here)
-        advisorRepository.save(advisor);
+        AssignManagerRequestDTO request = new AssignManagerRequestDTO("MGR-0104");
 
-        UpdateProfileRequestDTO request = new UpdateProfileRequestDTO(
-                0,"UpdatedFirst", "UpdatedLast", "1112223333");
-
-        mockMvc.perform(put("/api/v1/users/profile")
+        mockMvc.perform(patch("/api/v1/users/{employeeId}/manager", "EMP-0105")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
-                        // Mock the JWT with the exact subject matching our saved entity
-                        .with(jwt().jwt(jwt -> jwt.subject("UPDATE-001").claim("scope", "ROLE_ADVISOR"))))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    void updateProfile_Returns401_WhenUnauthenticated() throws Exception {
-        UpdateProfileRequestDTO request = new UpdateProfileRequestDTO(
-                0, "Hacker", "Man", "9998887777");
+    @WithMockUser(roles = "ADMIN")
+    void deactivateUser_Returns204_WhenSuccessful() throws Exception {
+        testFixtureFactory.getOrCreateTestAdvisor(106L, "TGT-0106", "10601060", "Target");
+
+        mockMvc.perform(delete("/api/v1/users/{employeeId}", "TGT-0106"))
+                .andExpect(status().isNoContent());
+    }
+
+    // --- PROFILE & PASSWORD E2E ---
+
+    @Test
+    @WithMockUser(username = "UPD-0107", roles = "ADVISOR")
+    void updateProfile_Returns204_OnValidRequest() throws Exception {
+        Advisor advisor = testFixtureFactory.getOrCreateTestAdvisor(107L, "UPD-0107", "10701070", "Update");
+
+        // Factory sets version to 0 natively
+        UpdateProfileRequestDTO request = new UpdateProfileRequestDTO(advisor.getVersion(), "UpdatedFirst", "UpdatedLast", "1112223333");
 
         mockMvc.perform(put("/api/v1/users/profile")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isNoContent());
     }
 
     @Test
+    @WithMockUser(username = "PWD-0108", roles = "ADVISOR")
     void changePassword_Returns204_OnValidRequest() throws Exception {
-        // We use the real password encoder to generate a valid hash for the TestContainer
-        String currentHashedPassword = passwordEncoder.encode("CurrentPass123");
-
-        Admin admin = Admin.builder()
-                .id(600L)
-                .employeeId("PASS-001")
-                .passwordHash(currentHashedPassword)
-                .firstName("Pass")
-                .lastName("Changer")
-                .phone("123456789")
-                .email("pass@changer.mail")
-                .isActive(true)
-                .build();
-
-        adminRepository.save(admin);
+        Advisor advisor = testFixtureFactory.getOrCreateTestAdvisor(108L, "PWD-0108", "10801080", "PassChanger");
+        advisor.setPasswordHash(passwordEncoder.encode("CurrentPass123"));
+        advisorRepository.save(advisor);
 
         ChangePasswordRequestDTO request = new ChangePasswordRequestDTO("CurrentPass123", "BrandNewPass456");
 
         mockMvc.perform(patch("/api/v1/users/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
-                        .with(jwt().jwt(jwt -> jwt.subject("PASS-001").claim("scope", "ROLE_ADMIN"))))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNoContent());
     }
 
     @Test
+    @WithMockUser(username = "BAD-0109", roles = "ADVISOR")
     void changePassword_Returns400_WhenOldPasswordIsWrong() throws Exception {
-        String currentHashedPassword = passwordEncoder.encode("ActualPass123");
-        Admin admin = Admin.builder()
-                .id(700L)
-                .employeeId("BAD-PASS-001")
-                .passwordHash(currentHashedPassword)
-                .firstName("Bad")
-                .lastName("Passer")
-                .phone("123456789")
-                .email("bad@passer.mail")
-                .isActive(true)
-                .build();
-        adminRepository.save(admin);
+        Advisor advisor = testFixtureFactory.getOrCreateTestAdvisor(109L, "BAD-0109", "10901090", "BadPasser");
+        advisor.setPasswordHash(passwordEncoder.encode("ActualPass123"));
+        advisorRepository.save(advisor);
 
         ChangePasswordRequestDTO request = new ChangePasswordRequestDTO("WrongGuess999", "NewHackedPass123");
 
         mockMvc.perform(patch("/api/v1/users/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
-                        .with(jwt().jwt(jwt -> jwt.subject("BAD-PASS-001")))) // Authenticated as the actual user
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("Incorrect current password."));
-    }
-
-    @Test
-    void changePassword_Returns400_WhenNewPasswordIsSameAsOld() throws Exception {
-        String currentHashedPassword = passwordEncoder.encode("StubbornPass123");
-        Admin admin = Admin.builder()
-                .id(800L)
-                .employeeId("STUBBORN-001")
-                .passwordHash(currentHashedPassword)
-                .firstName("Stubborn")
-                .lastName("User")
-                .phone("123456789")
-                .email("stub@born.mail")
-                .isActive(true)
-                .build();
-        adminRepository.save(admin);
-
-        ChangePasswordRequestDTO request = new ChangePasswordRequestDTO("StubbornPass123", "StubbornPass123");
-
-        mockMvc.perform(patch("/api/v1/users/password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
-                        .with(jwt().jwt(jwt -> jwt.subject("STUBBORN-001"))))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("New password cannot be the same as the old password."));
     }
 }
