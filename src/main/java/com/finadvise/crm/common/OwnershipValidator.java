@@ -14,6 +14,7 @@ public class OwnershipValidator {
 
     private final ClientRepository clientRepository;
     private final AssetRepository assetRepository;
+    private final ProductRepository productRepository;
     private final AdvisorRepository advisorRepository;
     private final AdminRepository adminRepository;
 
@@ -23,6 +24,18 @@ public class OwnershipValidator {
 
     public boolean ownsAsset(String clientUid, Long assetId) {
         return assetRepository.existsByIdAndClientClientUid(assetId, clientUid);
+    }
+
+    public boolean canModifyProduct(String clientUid, Long productId, String employeeId) {
+        return productRepository.canModifyProduct(productId, clientUid, employeeId);
+    }
+
+    public boolean hasAnyReadAccessToClientProducts(String clientUid, String employeeId) {
+        if (canAccessClient(clientUid, employeeId)) {
+            return true;
+        }
+
+        return productRepository.existsByClientClientUidAndManagedByEmployeeId(clientUid, employeeId);
     }
 
     public boolean canAccessUser(String employeeId, String requesterId) {
