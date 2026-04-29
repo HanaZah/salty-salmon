@@ -1,12 +1,15 @@
 package com.finadvise.crm.users;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public record LoginRequestDTO(
 
-        @NotNull(message = "Employee ID is required")
+        @NotBlank(message = "Employee ID is required")
+        @Size(max = 20, message = "Employee ID has wrong size or pattern")
         String employeeId,
 
-        @NotNull(message = "Password is required")
+        @NotBlank(message = "Password is required")
+        @Size(max = 72, message = "Password must be at most 72 characters long")
         String password
 ) {}

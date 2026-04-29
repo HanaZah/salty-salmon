@@ -173,17 +173,9 @@ public class UserService implements UserDetailsService {
             throw new ObjectOptimisticLockingFailureException(User.class, Objects.requireNonNull(user.getId()));
         }
 
-        if (request.firstName() != null && !request.firstName().isBlank()) {
-            user.setFirstName(request.firstName());
-        }
-
-        if (request.lastName() != null && !request.lastName().isBlank()) {
-            user.setLastName(request.lastName());
-        }
-
-        if (user instanceof Advisor advisor && request.phone() != null && !request.phone().isBlank()) {
-            advisor.setPhone(request.phone());
-        }
+        user.setFirstName(request.firstName());
+        user.setLastName(request.lastName());
+        user.setPhone(request.phone());
 
         userRepository.save(user);
     }

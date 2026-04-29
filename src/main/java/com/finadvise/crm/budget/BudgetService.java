@@ -46,6 +46,7 @@ public class BudgetService {
         BudgetSummaryProjection summary = budgetRepository.getSummaryByClientId(clientId);
 
         return new BudgetFullDTO(
+                clientUid,
                 summary != null ? summary.getTotalIncomes() : BigDecimal.ZERO,
                 summary != null ? summary.getTotalExpenses() : BigDecimal.ZERO,
                 summary != null ? summary.getNetCashflow() : BigDecimal.ZERO,
@@ -55,7 +56,7 @@ public class BudgetService {
     }
 
     @Transactional
-    public void updateFullBudget(String clientUid, BudgetFullDTO dto, String requesterId) {
+    public void updateFullBudget(String clientUid, UpdateBudgetRequestDTO dto, String requesterId) {
         if (!ownershipValidator.canAccessClient(clientUid, requesterId)) {
             throw new AccessDeniedException("Unauthorized budget update attempt.");
         }

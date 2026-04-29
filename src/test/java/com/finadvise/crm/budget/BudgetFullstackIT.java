@@ -71,8 +71,7 @@ class BudgetFullstackIT {
                 null // null version for new items
         );
 
-        BudgetFullDTO payload = new BudgetFullDTO(
-                null, null, null,
+        UpdateBudgetRequestDTO payload = new UpdateBudgetRequestDTO(
                 List.of(newIncomeDto),
                 List.of()
         );
@@ -91,7 +90,7 @@ class BudgetFullstackIT {
     @Test
     @WithMockUser(username = "ROGUE_99", roles = "ADVISOR")
     void updateBudget_Fails_WhenAdvisorDoesNotOwnClient() throws Exception {
-        BudgetFullDTO payload = new BudgetFullDTO(null, null, null, List.of(), List.of());
+        UpdateBudgetRequestDTO payload = new UpdateBudgetRequestDTO(List.of(), List.of());
 
         mockMvc.perform(put("/api/v1/clients/{clientUid}/budget", testClient.getClientUid())
                         .contentType(MediaType.APPLICATION_JSON)

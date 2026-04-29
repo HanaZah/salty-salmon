@@ -24,6 +24,6 @@ public record AddressDTO(
         String city,
 
         @NotBlank(message = "Postal code (PSČ) is required")
-        @Pattern(regexp = "^\\d{3}\\s\\d{2}$", message = "Format: 123 45")
+        @Pattern(regexp = "^\\d{3}\\s\\d{2}$", message = "Format required: 123 45")
         String postalCode
 ) {}

@@ -1,16 +1,22 @@
 package com.finadvise.crm.users;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 public record UpdateProfileRequestDTO(
         @NotNull(message = "Version is required for concurrency control")
         Integer version,
 
-        @NotNull(message = "First name is required")
+        @NotBlank(message = "First name is required")
+        @Size(max = 50, message = "First name must be at most 50 characters long")
         String firstName,
 
-        @NotNull(message = "Last name is required")
+        @NotBlank(message = "Last name is required")
+        @Size(max = 50, message = "Last name must be at most 50 characters long")
         String lastName,
 
-        String phone // Nullable if the user is an Admin
+        @NotBlank(message = "Phone is required")
+        @Size(max = 20, message = "Phone must be at most 20 characters long")
+        String phone
 ) {}

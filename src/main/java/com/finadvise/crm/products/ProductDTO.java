@@ -1,5 +1,6 @@
 package com.finadvise.crm.products;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -24,12 +25,14 @@ public record ProductDTO(
         @NotNull(message = "Product type is required")
         Long productTypeId,
 
+        @JsonProperty(access = JsonProperty.Access.READ_ONLY)
         String productTypeName, // Read-only
 
         @NotNull(message = "Provider is required")
         Long providerId,
 
+        @JsonProperty(access = JsonProperty.Access.READ_ONLY)
         String providerName, // Read-only
 
-        String managedByEmployeeId // For display/security reference
+        String managedByEmployeeId // Writable but optional: null means the product is externally managed or direct
 ) {}

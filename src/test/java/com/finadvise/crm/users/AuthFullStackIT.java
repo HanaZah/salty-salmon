@@ -91,7 +91,7 @@ class AuthFullStackIT {
                 .firstName("Recovery")
                 .lastName("Test")
                 .phone("987654321")
-                .email("recovery@test.mail")
+                .email("recovery@test.com")
                 .passwordHash(passwordEncoder.encode(rawPassword))
                 .isActive(true)
                 .build();
@@ -103,7 +103,7 @@ class AuthFullStackIT {
                 .firstName("Recovery2")
                 .lastName("Test")
                 .phone("987654321")
-                .email("recovery2@test.mail")
+                .email("recovery2@test.com")
                 .passwordHash(passwordEncoder.encode(rawPassword))
                 .isActive(true)
                 .build();
@@ -115,7 +115,7 @@ class AuthFullStackIT {
                 .firstName("Inactive")
                 .lastName("Test")
                 .phone("987654321")
-                .email("inactive@test.mail")
+                .email("inactive@test.com")
                 .passwordHash(passwordEncoder.encode(rawPassword))
                 .isActive(false)
                 .build();
@@ -128,7 +128,7 @@ class AuthFullStackIT {
                 .andExpect(
                         jsonPath(
                                 "$.adminEmails", containsInAnyOrder(
-                                        "recovery@test.mail", "recovery2@test.mail", "$INITIAL_ADMIN_EMAIL"
+                                        "recovery@test.com", "recovery2@test.com", "admin@test.com"
                                 )
                         )
                 );

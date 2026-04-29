@@ -1,5 +1,6 @@
 package com.finadvise.crm.assets;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -26,5 +27,6 @@ public record AssetDTO(
         Long assetTypeId,
 
         // Read-only field for UI to display a localized type name
+        @JsonProperty(access = JsonProperty.Access.READ_ONLY)
         String assetTypeName
 ) {}

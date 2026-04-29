@@ -45,7 +45,7 @@ class BudgetServiceTest {
         when(clientRepository.findIdByClientUid(clientUid)).thenReturn(Optional.of(clientId));
 
         BudgetItemDTO staleDto = new BudgetItemDTO(100L, 1L,"Salary", 50000, null, 1);
-        BudgetFullDTO request = new BudgetFullDTO(null, null, null, List.of(staleDto), List.of());
+        UpdateBudgetRequestDTO request = new UpdateBudgetRequestDTO(List.of(staleDto), List.of());
 
         assertThrows(ObjectOptimisticLockingFailureException.class, () ->
                 budgetService.updateFullBudget(clientUid, request, requesterId)
@@ -80,9 +80,10 @@ class BudgetServiceTest {
         BudgetItemDTO createDto = new BudgetItemDTO(
                 null, 1L, "Salary", 3000, null, null); // New item
 
-        BudgetFullDTO request = new BudgetFullDTO(null, null, null,
+        UpdateBudgetRequestDTO request = new UpdateBudgetRequestDTO(
                 List.of(updateDto, deleteDto, createDto),
-                List.of());
+                List.of()
+        );
 
         budgetService.updateFullBudget(clientUid, request, requesterId);
 
@@ -114,7 +115,7 @@ class BudgetServiceTest {
         when(incomeRepository.findAllByClientId(clientId)).thenReturn(List.of(existingIncome));
 
         BudgetItemDTO malformedDto = new BudgetItemDTO(100L, 1L, "Salary", 50000, null, null);
-        BudgetFullDTO request = new BudgetFullDTO(null, null, null, List.of(malformedDto), List.of());
+        UpdateBudgetRequestDTO request = new UpdateBudgetRequestDTO(List.of(malformedDto), List.of());
 
         assertThrows(MissingVersionException.class, () ->
                 budgetService.updateFullBudget(clientUid, request, requesterId)

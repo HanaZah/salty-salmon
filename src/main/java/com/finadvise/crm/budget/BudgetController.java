@@ -46,7 +46,7 @@ public class BudgetController {
     @PutMapping
     public ResponseEntity<Void> updateBudget(
             @PathVariable String clientUid,
-            @Valid @RequestBody BudgetFullDTO request,
+            @Valid @RequestBody UpdateBudgetRequestDTO request,
             Principal principal) {
 
         budgetService.updateFullBudget(clientUid, request, principal.getName());

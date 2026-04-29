@@ -21,9 +21,9 @@ public class AdminDatabaseSeeder implements CommandLineRunner {
 
     @Value("${INITIAL_ADMIN_PASSWORD}")
     private String adminPassword;
-    @Value("$INITIAL_ADMIN_PHONE")
+    @Value("${INITIAL_ADMIN_PHONE}")
     private String adminPhone;
-    @Value("$INITIAL_ADMIN_EMAIL")
+    @Value("${INITIAL_ADMIN_EMAIL}")
     private String adminEmail;
 
     @Override

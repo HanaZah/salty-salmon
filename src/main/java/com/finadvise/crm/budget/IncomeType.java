@@ -1,6 +1,8 @@
 package com.finadvise.crm.budget;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 @Entity
@@ -17,5 +19,7 @@ public class IncomeType {
     private Long id;
 
     @Column(name = "NAME", nullable = false, unique = true, length = 50)
+    @NotBlank(message = "Income type name cannot be blank")
+    @Size(max = 50, message = "Income type name cannot exceed 50 characters")
     private String name;
 }
