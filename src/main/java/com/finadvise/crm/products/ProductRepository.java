@@ -32,6 +32,25 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             @Param("employeeId") String employeeId
     );
 
+    @Query("""
+        SELECT COUNT(p) > 0
+        FROM Product p
+        JOIN p.client c
+        JOIN c.advisor a
+        LEFT JOIN p.managedBy m
+        WHERE p.id = :productId
+          AND c.clientUid = :clientUid
+          AND (
+              m.employeeId = :employeeId
+              OR a.employeeId = :employeeId
+          )
+    """)
+    boolean canAccessProduct(
+            @Param("productId") Long productId,
+            @Param("clientUid") String clientUid,
+            @Param("employeeId") String employeeId
+    );
+
     boolean existsByClientClientUidAndManagedByEmployeeId(String clientUid, String employeeId);
 
     List<Product> findAllByClientClientUidAndManagedByEmployeeId(String clientUid, String employeeId);

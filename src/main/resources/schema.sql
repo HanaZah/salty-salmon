@@ -230,18 +230,20 @@ CREATE TABLE IF NOT EXISTS DOCUMENT_TYPES (
 /
 
 CREATE TABLE IF NOT EXISTS DOCUMENTS (
-           DOCUMENT_ID      INTEGER NOT NULL,
-           FILE_NAME        VARCHAR2(255 CHAR) NOT NULL,
-           FILE_PATH        VARCHAR2(512 CHAR) NOT NULL,
-           UPLOADED_AT      DATE DEFAULT TRUNC(SYSDATE) NOT NULL,
-           DOCUMENT_TYPE_ID INTEGER NOT NULL,
-           CLIENT_ID        INTEGER NOT NULL,
-           PRODUCT_ID       INTEGER,
-           VERSION       INTEGER DEFAULT 0 NOT NULL,
+           DOCUMENT_ID          INTEGER NOT NULL,
+           FILE_NAME            VARCHAR2(255 CHAR) NOT NULL,
+           FILE_PATH            VARCHAR2(512 CHAR) NOT NULL,
+           UPLOADED_AT          DATE DEFAULT TRUNC(SYSDATE) NOT NULL,
+           DOCUMENT_TYPE_ID     INTEGER NOT NULL,
+           CLIENT_ID            INTEGER NOT NULL,
+           PRODUCT_ID           INTEGER,
+           IS_ACTIVE            NUMBER(1) DEFAULT 1 NOT NULL,
+           STORAGE_DELETED_AT   DATE,
            CONSTRAINT DOCUMENT_PK PRIMARY KEY (DOCUMENT_ID),
            CONSTRAINT DOCUMENT_TYPE_FK FOREIGN KEY (DOCUMENT_TYPE_ID) REFERENCES DOCUMENT_TYPES (DOCUMENT_TYPE_ID),
            CONSTRAINT DOCUMENT_CLIENT_FK FOREIGN KEY (CLIENT_ID) REFERENCES CLIENTS (CLIENT_ID) ON DELETE CASCADE,
-           CONSTRAINT DOCUMENT_PRODUCT_FK FOREIGN KEY (PRODUCT_ID) REFERENCES PRODUCTS (PRODUCT_ID) ON DELETE CASCADE
+           CONSTRAINT DOCUMENT_PRODUCT_FK FOREIGN KEY (PRODUCT_ID) REFERENCES PRODUCTS (PRODUCT_ID) ON DELETE CASCADE,
+           CONSTRAINT DOCUMENT_ACTIVE_CK CHECK (IS_ACTIVE IN (0, 1))
 );
 /
 
@@ -389,11 +391,34 @@ BEFORE INSERT OR UPDATE ON DOCUMENTS
 FOR EACH ROW
 DECLARE
     v_client_active NUMBER(1);
+    v_product_client_id NUMBER;
 BEGIN
+    -- Prevent any updates to soft-deleted documents
+    IF UPDATING AND :OLD.IS_ACTIVE = 0 THEN
+        raise_application_error(-20020, 'Cannot update a soft-deleted document.');
+    END IF;
+
+    -- Ensure the document is being attached to an active client
     IF INSERTING OR (UPDATING AND :NEW.CLIENT_ID <> :OLD.CLIENT_ID) THEN
-        SELECT IS_ACTIVE INTO v_client_active FROM CLIENTS WHERE CLIENT_ID = :NEW.CLIENT_ID;
+        SELECT IS_ACTIVE INTO v_client_active
+        FROM CLIENTS
+        WHERE CLIENT_ID = :NEW.CLIENT_ID;
+
         IF v_client_active = 0 THEN
             raise_application_error(-20019, 'Cannot attach a document to an inactive client.');
+        END IF;
+    END IF;
+
+    -- If a product is linked, ensure it belongs to the same client
+    IF :NEW.PRODUCT_ID IS NOT NULL THEN
+        IF INSERTING OR (UPDATING AND (:NEW.PRODUCT_ID <> NVL(:OLD.PRODUCT_ID, -1) OR :NEW.CLIENT_ID <> :OLD.CLIENT_ID)) THEN
+            SELECT CLIENT_ID INTO v_product_client_id
+            FROM PRODUCTS
+            WHERE PRODUCT_ID = :NEW.PRODUCT_ID;
+
+            IF v_product_client_id <> :NEW.CLIENT_ID THEN
+                raise_application_error(-20021, 'Data Integrity Violation: The referenced product does not belong to the referenced client.');
+            END IF;
         END IF;
     END IF;
 END;

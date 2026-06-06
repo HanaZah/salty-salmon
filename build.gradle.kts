@@ -34,6 +34,8 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
 	implementation("org.hashids:hashids:1.0.3")
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1")
+	implementation("io.awspring.cloud:spring-cloud-aws-starter-s3:4.0.0")
+	implementation("org.apache.tika:tika-core:2.9.2")
 	compileOnly("org.projectlombok:lombok")
 	runtimeOnly("com.oracle.database.jdbc:ojdbc11")
 	annotationProcessor("org.projectlombok:lombok")

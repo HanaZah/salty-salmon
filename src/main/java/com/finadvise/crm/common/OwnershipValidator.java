@@ -2,6 +2,7 @@ package com.finadvise.crm.common;
 
 import com.finadvise.crm.assets.AssetRepository;
 import com.finadvise.crm.clients.ClientRepository;
+import com.finadvise.crm.documents.DocumentRepository;
 import com.finadvise.crm.products.ProductRepository;
 import com.finadvise.crm.users.AdminRepository;
 import com.finadvise.crm.users.AdvisorRepository;
@@ -17,6 +18,7 @@ public class OwnershipValidator {
     private final ProductRepository productRepository;
     private final AdvisorRepository advisorRepository;
     private final AdminRepository adminRepository;
+    private final DocumentRepository documentRepository;
 
     public boolean canAccessClient(String clientUid, String employeeId) {
         return clientRepository.existsByClientUidAndAdvisorEmployeeId(clientUid, employeeId);
@@ -28,6 +30,10 @@ public class OwnershipValidator {
 
     public boolean canModifyProduct(String clientUid, Long productId, String employeeId) {
         return productRepository.canModifyProduct(productId, clientUid, employeeId);
+    }
+
+    public  boolean canAccessProduct(Long productId, String clientUid, String employeeId) {
+        return productRepository.canAccessProduct(productId, clientUid, employeeId);
     }
 
     public boolean hasAnyReadAccessToClientProducts(String clientUid, String employeeId) {
@@ -42,5 +48,9 @@ public class OwnershipValidator {
         return employeeId.equals(requesterId)
                 || adminRepository.existsByEmployeeId(requesterId)
                 || advisorRepository.existsByEmployeeIdAndManagerEmployeeId(employeeId, requesterId);
+    }
+
+    public boolean canAccessDocument(Long documentId, String clientUid, String employeeId) {
+        return documentRepository.canAccessDocument(documentId, clientUid, employeeId);
     }
 }
