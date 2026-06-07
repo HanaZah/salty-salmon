@@ -42,8 +42,8 @@ public class TestFixtureFactory {
         Address testAddress = addressRepository.findByHouseNumberAndStreetId("123/45", testStreet.getId())
                 .orElseGet(() -> addressRepository.save(Address.builder().street(testStreet).houseNumber("123/45").build()));
 
-        Client client =  clientRepository.findById(id)
-                .orElseGet(() -> clientRepository.save(Client.builder()
+        Client client = clientRepository.findById(id).orElseGet(
+                () -> clientRepository.save(Client.builder()
                         .id(id)
                         .clientUid(uid)
                         .personalId(personalId)
@@ -74,7 +74,8 @@ public class TestFixtureFactory {
     }
 
     public Advisor getOrCreateTestAdvisor(Long id, String uid, String ico, String lastName) {
-        Advisor advisor = advisorRepository.save(Advisor.builder()
+        Advisor advisor = advisorRepository.findById(id).orElseGet(
+                () -> advisorRepository.save(Advisor.builder()
                         .ico(ico)
                         .manager(null)
                         .id(id)
@@ -86,7 +87,8 @@ public class TestFixtureFactory {
                         .email("budget@" + lastName + ".mail")
                         .version(0)
                         .isActive(true)
-                        .build());
+                        .build())
+                );
 
         if(!advisor.getEmployeeId().equals(uid)) {
             throw new IllegalStateException("Advisor with id " + id + " already exists with different uid. "

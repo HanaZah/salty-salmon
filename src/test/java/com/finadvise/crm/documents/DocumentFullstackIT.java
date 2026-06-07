@@ -64,7 +64,6 @@ class DocumentFullstackIT {
     // Infrastructure boundaries strictly mocked for HTTP/DB slice testing
     @MockitoBean private S3Template s3Template;
     @MockitoBean private Tika tika;
-    @MockitoBean private MinioS3BucketProvisioner s3BucketProvisioner;
 
     private Client testClient;
     private DocumentType testDocumentType;
@@ -181,8 +180,8 @@ class DocumentFullstackIT {
     @Test
     @WithMockUser(username = "ADV_501", roles = "ADVISOR")
     void updateDocument_Success_UpdatesMetadata() throws Exception {
-        ProductType pType = productTypeRepository.save(ProductType.builder().name("Insurance").build());
-        Provider provider = providerRepository.save(Provider.builder().name("Allianz").build());
+        ProductType pType = productTypeRepository.save(ProductType.builder().name("TestProductType").build());
+        Provider provider = providerRepository.save(Provider.builder().name("TestProductProvider").build());
 
         Product product = productRepository.save(Product.builder()
                 .name("Savings Account")

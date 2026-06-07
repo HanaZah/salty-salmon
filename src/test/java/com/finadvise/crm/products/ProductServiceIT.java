@@ -51,8 +51,8 @@ class ProductServiceIT {
         Client testClient = testFixtureFactory.getOrCreateTestClient(
                 101L, "CLI-0101", "1000000001", "100000001", "Smith", testAdvisor);
 
-        ProductType type = productTypeRepository.save(ProductType.builder().name("Life Insurance").build());
-        Provider provider = providerRepository.save(Provider.builder().name("Allianz").build());
+        ProductType type = productTypeRepository.save(ProductType.builder().name("TestProductType").build());
+        Provider provider = providerRepository.save(Provider.builder().name("TestProductProvider").build());
 
         ProductDTO payload = new ProductDTO(
                 null, "Premium Life", new BigDecimal("1500.00"),
@@ -99,8 +99,8 @@ class ProductServiceIT {
         Client testClient = testFixtureFactory.getOrCreateTestClient(
                 104L, "CLI-0104", "1000000002", "100000004", "Williams", testAdvisor);
 
-        ProductType type = productTypeRepository.save(ProductType.builder().name("Investment").build());
-        Provider provider = providerRepository.save(Provider.builder().name("Amundi").build());
+        ProductType type = productTypeRepository.save(ProductType.builder().name("TestProductType").build());
+        Provider provider = providerRepository.save(Provider.builder().name("TestProductProvider").build());
 
         Product existingProduct = productRepository.save(Product.builder()
                 .name("Global Equity")

@@ -21,7 +21,7 @@ public class AnniversaryRolloverJob {
     private static final int CHUNK_SIZE = 500;
 
     // Runs every day at 01:00 AM server time
-    @Scheduled(cron = "0 0 1 * * *")
+    @Scheduled(cron = "${app.scheduling.anniversary-rollover.cron:0 0 1 * * ?}")
     @Transactional
     public void rollForwardAnniversaries() {
         log.info("Starting nightly product anniversary rollover job...");
