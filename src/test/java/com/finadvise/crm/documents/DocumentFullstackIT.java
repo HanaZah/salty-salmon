@@ -64,7 +64,7 @@ class DocumentFullstackIT {
     // Infrastructure boundaries strictly mocked for HTTP/DB slice testing
     @MockitoBean private S3Template s3Template;
     @MockitoBean private Tika tika;
-    @MockitoBean private S3BucketProvisioner s3BucketProvisioner;
+    @MockitoBean private MinioS3BucketProvisioner s3BucketProvisioner;
 
     private Client testClient;
     private DocumentType testDocumentType;

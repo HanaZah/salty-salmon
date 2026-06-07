@@ -46,7 +46,6 @@ class DocumentServiceIT {
     // Isolate S3 and Tika from the DB integration test
     @MockitoBean private S3Template s3Template;
     @MockitoBean private Tika tika;
-    @MockitoBean private S3BucketProvisioner bucketProvisioner;
 
     private Advisor testAdvisor;
     private Client testClient;
@@ -80,8 +79,8 @@ class DocumentServiceIT {
 
     @Test
     void updateDocument_UpdatesMetadata_WhenAuthorized() {
-        ProductType pType = productTypeRepository.save(ProductType.builder().name("Insurance").build());
-        Provider provider = providerRepository.save(Provider.builder().name("Allianz").build());
+        ProductType pType = productTypeRepository.save(ProductType.builder().name("TestProductType").build());
+        Provider provider = providerRepository.save(Provider.builder().name("TestProductProvider").build());
 
         Product product = productRepository.save(Product.builder()
                 .name("Life Ins")

@@ -45,7 +45,7 @@ class DocumentServiceTest {
     @Mock private OwnershipValidator ownershipValidator;
     @Mock private S3Template s3Template;
     @Mock private Tika tika;
-    @Mock private S3BucketProvisioner bucketProvisioner;
+    @Mock private MinioS3BucketProvisioner bucketProvisioner;
 
     @Mock private MultipartFile mockFile;
 
