@@ -19,6 +19,10 @@ public class DocumentTypeDatabaseSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String @NonNull ... args) {
+        if (documentTypeRepository.count() > 0) {
+            return;
+        }
+
         List<String> defaultTypes = List.of(
                 "Doklad totožnosti",
                 "Smlouva",
@@ -29,16 +33,10 @@ public class DocumentTypeDatabaseSeeder implements CommandLineRunner {
                 "Ostatní"
         );
 
-        int seededCount = 0;
         for (String typeName : defaultTypes) {
-            if (documentTypeRepository.findByName(typeName).isEmpty()) {
-                documentTypeRepository.save(DocumentType.builder().name(typeName).build());
-                seededCount++;
-            }
+            documentTypeRepository.save(DocumentType.builder().name(typeName).build());
         }
+        log.info("Seeded default DocumentTypes into the database.");
 
-        if (seededCount > 0) {
-            log.info("Seeded {} new DocumentTypes into the database.", seededCount);
-        }
     }
 }
