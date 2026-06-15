@@ -68,7 +68,7 @@ class ProductFullstackIT {
     // --- GET CLIENT PRODUCTS TESTS ---
 
     @Test
-    @WithMockUser(username = "ADV-0001", roles = "ADVISOR")
+    @WithMockUser(username = "ADV-0001", authorities = "ADVISOR")
     void getClientProducts_Success_Returns200AndProductList() throws Exception {
         productRepository.save(Product.builder()
                 .name("Secure Future Plan")
@@ -90,7 +90,7 @@ class ProductFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ROG-0002", roles = "ADVISOR")
+    @WithMockUser(username = "ROG-0002", authorities = "ADVISOR")
     void getClientProducts_Fails_ReturnsOpaque404_WhenNotAssignedAdvisor() throws Exception {
         mockMvc.perform(get("/api/v1/clients/{clientUid}/products", testClient.getClientUid())
                         .accept(MediaType.APPLICATION_JSON))
@@ -102,7 +102,7 @@ class ProductFullstackIT {
     // --- CREATE PRODUCT TESTS ---
 
     @Test
-    @WithMockUser(username = "ADV-0001", roles = "ADVISOR")
+    @WithMockUser(username = "ADV-0001", authorities = "ADVISOR")
     void createProduct_Success_Returns201AndCreatedDto() throws Exception {
         ProductDTO payload = new ProductDTO(
                 null, "Premium Life Plan", new BigDecimal("2500.00"),
@@ -123,7 +123,7 @@ class ProductFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ADV-0001", roles = "ADVISOR")
+    @WithMockUser(username = "ADV-0001", authorities = "ADVISOR")
     void createProduct_Fails_Returns400_WhenValidationFails() throws Exception {
         // Amount is negative, violating @DecimalMin("0.00")
         ProductDTO invalidPayload = new ProductDTO(
@@ -140,7 +140,7 @@ class ProductFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ROG-0002", roles = "ADVISOR")
+    @WithMockUser(username = "ROG-0002", authorities = "ADVISOR")
     void createProduct_Fails_Returns403_WhenAdvisorDoesNotOwnClient() throws Exception {
         // Service layer directly throws AccessDeniedException on creation
         ProductDTO payload = new ProductDTO(
@@ -159,7 +159,7 @@ class ProductFullstackIT {
     // --- UPDATE PRODUCT TESTS ---
 
     @Test
-    @WithMockUser(username = "ADV-0001", roles = "ADVISOR")
+    @WithMockUser(username = "ADV-0001", authorities = "ADVISOR")
     void updateProduct_Success_Returns200AndUpdatedDto() throws Exception {
         Product existingProduct = productRepository.save(Product.builder()
                 .name("Legacy Fund")
@@ -187,7 +187,7 @@ class ProductFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ROG-0002", roles = "ADVISOR")
+    @WithMockUser(username = "ROG-0002", authorities = "ADVISOR")
     void updateProduct_ReturnsOpaque404_ToPreventIdEnumeration() throws Exception {
         Product existingProduct = productRepository.save(Product.builder()
                 .name("Top Secret Fund")
@@ -215,7 +215,7 @@ class ProductFullstackIT {
     // --- DELETE PRODUCT TESTS ---
 
     @Test
-    @WithMockUser(username = "ADV-0001", roles = "ADVISOR")
+    @WithMockUser(username = "ADV-0001", authorities = "ADVISOR")
     void deleteProduct_Success_Returns204NoContent() throws Exception {
         Product existingProduct = productRepository.save(Product.builder()
                 .name("Disposable Plan")
@@ -235,7 +235,7 @@ class ProductFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ROG-0002", roles = "ADVISOR")
+    @WithMockUser(username = "ROG-0002", authorities = "ADVISOR")
     void deleteProduct_ReturnsOpaque404_ToPreventIdEnumeration() throws Exception {
         Product existingProduct = productRepository.save(Product.builder()
                 .name("Protected Plan")
@@ -256,7 +256,7 @@ class ProductFullstackIT {
     // --- SEARCH PRODUCTS TESTS ---
 
     @Test
-    @WithMockUser(username = "ADV-0001", roles = "ADVISOR")
+    @WithMockUser(username = "ADV-0001", authorities = "ADVISOR")
     void searchProducts_Success_ReturnsPaginatedResults() throws Exception {
         productRepository.save(Product.builder()
                 .name("Indexed Fund")

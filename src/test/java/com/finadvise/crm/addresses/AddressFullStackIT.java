@@ -39,7 +39,7 @@ class AddressFullStackIT {
     private ObjectMapper objectMapper;
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = "ADMIN")
     void shouldExecuteFullFlowFromApiToOracle() throws Exception {
         var requestDto = new AddressDTO(null, "Thákurova", "6", "Praha", "100 00");
 
@@ -57,7 +57,7 @@ class AddressFullStackIT {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = "ADMIN")
     void getById_ReturnsAddress_WhenItExists() throws Exception {
         var requestDto = new AddressDTO(null, "Vodičkova", "15", "Praha", "110 00");
         String createResult = mockMvc.perform(post("/api/v1/addresses")
@@ -74,7 +74,7 @@ class AddressFullStackIT {
     }
 
     @Test
-    @WithMockUser(roles = "ADVISOR")
+    @WithMockUser(authorities = "ADVISOR")
     void getById_Returns404_WhenAddressDoesNotExist() throws Exception {
         mockMvc.perform(get("/api/v1/addresses/999999"))
                 .andExpect(status().isNotFound())
@@ -82,7 +82,7 @@ class AddressFullStackIT {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = "ADMIN")
     void create_Returns400_WhenValidationFails() throws Exception {
         // Bad PSC format
         var requestDto = new AddressDTO(null, "Thákurova", "6", "Praha", "10000");
@@ -95,7 +95,7 @@ class AddressFullStackIT {
     }
 
     @Test
-    @WithMockUser(roles = "ADVISOR")
+    @WithMockUser(authorities = "ADVISOR")
     void create_Returns403_WhenUserIsAdvisor() throws Exception {
         var requestDto = new AddressDTO(null, "Thákurova", "6", "Praha", "100 00");
 

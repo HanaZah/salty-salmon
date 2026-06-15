@@ -85,7 +85,7 @@ class DocumentFullstackIT {
     // --- 1. UPLOAD ENDPOINT TESTS ---
 
     @Test
-    @WithMockUser(username = "ADV_501", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_501", authorities = "ADVISOR")
     void uploadDocuments_Success_CreatesNewDocuments() throws Exception {
         when(tika.detect(any(java.io.InputStream.class))).thenReturn("application/pdf");
 
@@ -119,7 +119,7 @@ class DocumentFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ROGUE_99", roles = "ADVISOR")
+    @WithMockUser(username = "ROGUE_99", authorities = "ADVISOR")
     void uploadDocuments_Fails_WhenAdvisorDoesNotOwnClient() throws Exception {
         FileMetadataDTO meta = new FileMetadataDTO("rogue_file.pdf", testDocumentType.getId(), null);
         Map<String, FileMetadataDTO> metadataMap = Map.of("uuid-123", meta);
@@ -138,7 +138,7 @@ class DocumentFullstackIT {
     // --- 2. GET ALL ENDPOINT TESTS ---
 
     @Test
-    @WithMockUser(username = "ADV_501", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_501", authorities = "ADVISOR")
     void getClientDocuments_Success_ReturnsDocumentList() throws Exception {
         documentRepository.save(Document.builder()
                 .fileName("identity.pdf")
@@ -158,7 +158,7 @@ class DocumentFullstackIT {
     // --- 3. GET SINGLE ENDPOINT TESTS ---
 
     @Test
-    @WithMockUser(username = "ADV_501", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_501", authorities = "ADVISOR")
     void getDocumentById_Success_ReturnsSpecificDocument() throws Exception {
         Document savedDoc = documentRepository.save(Document.builder()
                 .fileName("specific.pdf")
@@ -178,7 +178,7 @@ class DocumentFullstackIT {
     // --- 4. PATCH UPDATE ENDPOINT TESTS ---
 
     @Test
-    @WithMockUser(username = "ADV_501", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_501", authorities = "ADVISOR")
     void updateDocument_Success_UpdatesMetadata() throws Exception {
         ProductType pType = productTypeRepository.save(ProductType.builder().name("TestProductType").build());
         Provider provider = providerRepository.save(Provider.builder().name("TestProductProvider").build());
@@ -212,7 +212,7 @@ class DocumentFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ADV_501", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_501", authorities = "ADVISOR")
     void updateDocument_Fails_WithValidationErrorsOnBlankName() throws Exception {
         Document savedDoc = documentRepository.save(Document.builder()
                 .fileName("valid.pdf")
@@ -233,7 +233,7 @@ class DocumentFullstackIT {
     // --- 5. PRE-SIGNED URL GENERATION TESTS ---
 
     @Test
-    @WithMockUser(username = "ADV_501", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_501", authorities = "ADVISOR")
     void getDocumentDownloadLink_Success_ReturnsPreSignedUrl() throws Exception {
         Document savedDoc = documentRepository.save(Document.builder()
                 .fileName("download.pdf")

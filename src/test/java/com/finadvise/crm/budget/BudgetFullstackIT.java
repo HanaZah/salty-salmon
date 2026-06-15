@@ -60,7 +60,7 @@ class BudgetFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ADV_1234", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_1234", authorities = "ADVISOR")
     void updateBudget_Success_CreatesNewIncome() throws Exception {
         BudgetItemDTO newIncomeDto = new BudgetItemDTO(
                 null, // null ID means create
@@ -88,7 +88,7 @@ class BudgetFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ROGUE_99", roles = "ADVISOR")
+    @WithMockUser(username = "ROGUE_99", authorities = "ADVISOR")
     void updateBudget_Fails_WhenAdvisorDoesNotOwnClient() throws Exception {
         UpdateBudgetRequestDTO payload = new UpdateBudgetRequestDTO(List.of(), List.of());
 
@@ -101,7 +101,7 @@ class BudgetFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ADV_1234", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_1234", authorities = "ADVISOR")
     void getBudget_Success_ReturnsCalculatedBudgetSnapshot() throws Exception {
         incomeRepository.save(Income.builder()
                 .amount(50000)
@@ -131,7 +131,7 @@ class BudgetFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ROGUE_99", roles = "ADVISOR")
+    @WithMockUser(username = "ROGUE_99", authorities = "ADVISOR")
     void getBudget_Fails_WhenAdvisorDoesNotOwnClient() throws Exception {
         mockMvc.perform(get("/api/v1/clients/{clientUid}/budget", testClient.getClientUid())
                         .accept(MediaType.APPLICATION_JSON))

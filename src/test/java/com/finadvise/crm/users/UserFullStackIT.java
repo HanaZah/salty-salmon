@@ -43,7 +43,7 @@ class UserFullStackIT {
     // --- CREATE ADMIN / ADVISOR E2E ---
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = "ADMIN")
     void createNewAdmin_Returns200AndDto_WhenUserIsAdmin() throws Exception {
         CreateAdminRequestDTO request = new CreateAdminRequestDTO("Bob", "Builder", "bob@builder.com", "SecurePass1!");
 
@@ -56,7 +56,7 @@ class UserFullStackIT {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = "ADMIN")
     void createNewAdmin_Returns409_WhenEmailExists() throws Exception {
         // Use factory to create a valid baseline, then modify the email to trigger the conflict
         Advisor existingUser = testFixtureFactory.getOrCreateTestAdvisor(101L, "EMP-0101", "10101010", "Conflict");
@@ -73,7 +73,7 @@ class UserFullStackIT {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = "ADMIN")
     void createNewAdvisor_Returns200AndDto_WhenUserIsAdmin() throws Exception {
         CreateAdvisorRequestDTO request = new CreateAdvisorRequestDTO(
                 "Alice", "Smith", "11223344", "alice@finadvise.com", "1112223333", "Pass123"
@@ -100,7 +100,7 @@ class UserFullStackIT {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = "ADMIN")
     void getAllAdvisors_ReturnsPagedList_ForAdmin() throws Exception {
         testFixtureFactory.getOrCreateTestAdvisor(103L, "LST-0103", "10301030", "ListName");
 
@@ -114,7 +114,7 @@ class UserFullStackIT {
     // --- ASSIGN & DEACTIVATE E2E ---
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = "ADMIN")
     void assignManager_Returns204_WhenSuccessful() throws Exception {
         testFixtureFactory.getOrCreateTestAdvisor(104L, "MGR-0104", "10401040", "Manager");
         testFixtureFactory.getOrCreateTestAdvisor(105L, "EMP-0105", "10501050", "Employee");
@@ -128,7 +128,7 @@ class UserFullStackIT {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = "ADMIN")
     void deactivateUser_Returns204_WhenSuccessful() throws Exception {
         testFixtureFactory.getOrCreateTestAdvisor(106L, "TGT-0106", "10601060", "Target");
 
@@ -139,7 +139,7 @@ class UserFullStackIT {
     // --- PROFILE & PASSWORD E2E ---
 
     @Test
-    @WithMockUser(username = "UPD-0107", roles = "ADVISOR")
+    @WithMockUser(username = "UPD-0107", authorities = "ADVISOR")
     void updateProfile_Returns204_OnValidRequest() throws Exception {
         Advisor advisor = testFixtureFactory.getOrCreateTestAdvisor(107L, "UPD-0107", "10701070", "Update");
 
@@ -153,7 +153,7 @@ class UserFullStackIT {
     }
 
     @Test
-    @WithMockUser(username = "PWD-0108", roles = "ADVISOR")
+    @WithMockUser(username = "PWD-0108", authorities = "ADVISOR")
     void changePassword_Returns204_OnValidRequest() throws Exception {
         Advisor advisor = testFixtureFactory.getOrCreateTestAdvisor(108L, "PWD-0108", "10801080", "PassChanger");
         advisor.setPasswordHash(passwordEncoder.encode("CurrentPass123"));
@@ -168,7 +168,7 @@ class UserFullStackIT {
     }
 
     @Test
-    @WithMockUser(username = "BAD-0109", roles = "ADVISOR")
+    @WithMockUser(username = "BAD-0109", authorities = "ADVISOR")
     void changePassword_Returns400_WhenOldPasswordIsWrong() throws Exception {
         Advisor advisor = testFixtureFactory.getOrCreateTestAdvisor(109L, "BAD-0109", "10901090", "BadPasser");
         advisor.setPasswordHash(passwordEncoder.encode("ActualPass123"));

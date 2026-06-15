@@ -53,7 +53,7 @@ public class AssetFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ADV_01", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_01", authorities = "ADVISOR")
     void getClientAssets_Success_ReturnsListAndTotalValue() throws Exception {
         fixtureFactory.getOrCreateTestAsset("Byt Praha", testClient, realEstateType, 5000000);
         fixtureFactory.getOrCreateTestAsset("Chata", testClient, realEstateType, 1500000);
@@ -67,21 +67,21 @@ public class AssetFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "WRONG_ADV", roles = "ADVISOR")
+    @WithMockUser(username = "WRONG_ADV", authorities = "ADVISOR")
     void getClientAssets_Forbidden_WhenNotAssignedAdvisor() throws Exception {
         mockMvc.perform(get("/api/v1/clients/{clientUid}/assets", testClient.getClientUid()))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(username = "ADV_01", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_01", authorities = "ADVISOR")
     void getClientAssets_Forbidden_WhenClientUidIsInvalid() throws Exception {
         mockMvc.perform(get("/api/v1/clients/{clientUid}/assets", "INVALID_UID"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(username = "ADV_01", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_01", authorities = "ADVISOR")
     void createAsset_Success_Returns201AndDto() throws Exception {
         AssetDTO payload = new AssetDTO(null, "Garáž", 500000, "V centru", realEstateType.getId(), null);
 
@@ -95,7 +95,7 @@ public class AssetFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ADV_01", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_01", authorities = "ADVISOR")
     void createAsset_BadRequest_WhenValidationFails() throws Exception {
         AssetDTO invalidPayload = new AssetDTO(null, "", -100, null, realEstateType.getId(), null);
 
@@ -106,7 +106,7 @@ public class AssetFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ADV_01", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_01", authorities = "ADVISOR")
     void updateAsset_Success_Returns200AndUpdatedDto() throws Exception {
         Asset existingAsset = fixtureFactory.getOrCreateTestAsset("Staré Jméno", testClient, realEstateType, 1000000);
 
@@ -125,7 +125,7 @@ public class AssetFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ADV_01", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_01", authorities = "ADVISOR")
     void updateAsset_Forbidden_WhenAssetIdDoesNotExist() throws Exception {
         AssetDTO updatePayload = new AssetDTO(
                 999L, "Valid Name", 10000, null, realEstateType.getId(), null
@@ -138,7 +138,7 @@ public class AssetFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "ADV_01", roles = "ADVISOR")
+    @WithMockUser(username = "ADV_01", authorities = "ADVISOR")
     void deleteAsset_Success_Returns204() throws Exception {
         Asset existingAsset = fixtureFactory.getOrCreateTestAsset("K smazání", testClient, realEstateType, 100);
 
@@ -153,7 +153,7 @@ public class AssetFullstackIT {
     }
 
     @Test
-    @WithMockUser(username = "WRONG_ADV", roles = "ADVISOR")
+    @WithMockUser(username = "WRONG_ADV", authorities = "ADVISOR")
     void deleteAsset_Forbidden_WhenNotAssignedAdvisor() throws Exception {
         Asset existingAsset = fixtureFactory.getOrCreateTestAsset(
                 "Ochráněný majetek", testClient, realEstateType, 100

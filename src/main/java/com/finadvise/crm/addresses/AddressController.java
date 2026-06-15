@@ -31,7 +31,7 @@ public class AddressController {
             @ApiResponse(responseCode = "400", description = "Invalid address format or missing fields")
     })
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<AddressDTO> create(@Valid @RequestBody AddressDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(addressService.findOrCreateAddress(dto));
     }

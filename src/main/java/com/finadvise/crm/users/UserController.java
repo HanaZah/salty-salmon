@@ -45,6 +45,7 @@ public class UserController {
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/new/admin")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public AdminDTO createNewAdmin(@RequestBody @Valid CreateAdminRequestDTO request) {
         return userService.createAdmin(request);
     }
@@ -58,6 +59,7 @@ public class UserController {
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/new/advisor")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public AdvisorDTO createNewAdvisor(@RequestBody @Valid CreateAdvisorRequestDTO request) {
         return userService.createAdvisor(request);
     }
@@ -104,7 +106,7 @@ public class UserController {
     @Operation(summary = "List all Advisors", description = "Returns a paginated list of all advisors in the system. Requires ROLE_ADMIN.")
     @ApiResponse(responseCode = "200", description = "List retrieved successfully")
     @GetMapping("/advisors")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public Page<AdvisorDTO> getAllAdvisors(Pageable pageable) {
         return userService.getAllAdvisors(pageable);
     }
@@ -118,7 +120,7 @@ public class UserController {
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PatchMapping("/{employeeId}/manager")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<Void> assignManager(
             @PathVariable String employeeId,
             @RequestBody AssignManagerRequestDTO request) {
@@ -133,7 +135,7 @@ public class UserController {
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @DeleteMapping("/{employeeId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<Void> deactivateUser(@PathVariable String employeeId) {
         userService.deactivateUser(employeeId);
         return ResponseEntity.noContent().build();

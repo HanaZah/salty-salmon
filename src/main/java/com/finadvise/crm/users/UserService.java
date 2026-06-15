@@ -37,7 +37,7 @@ public class UserService implements UserDetailsService {
      * Creates a new advisor. Restricted to administrators.
      */
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public AdvisorDTO createAdvisor(CreateAdvisorRequestDTO request) {
         if (advisorRepository.existsByIco(request.ico())) {
             throw new ResourceConflictException("An advisor with this ICO already exists.");
@@ -68,7 +68,7 @@ public class UserService implements UserDetailsService {
      * Creates a new admin. Restricted to administrators.
      */
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public AdminDTO createAdmin(CreateAdminRequestDTO request) {
         if (userRepository.existsByEmail(request.email())) {
             throw new ResourceConflictException("A user with this email already exists.");
@@ -94,7 +94,7 @@ public class UserService implements UserDetailsService {
      * Updates an advisor's manager. Restricted to administrators.
      */
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public void assignManager(String employeeId, String managerEmployeeId) {
         Advisor advisor = advisorRepository.findByEmployeeId(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Advisor not found or access denied"));
@@ -203,14 +203,14 @@ public class UserService implements UserDetailsService {
         return adminRepository.findActiveEmails();
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public Page<AdvisorDTO> getAllAdvisors(Pageable pageable) {
         // Automatically translates to efficient paginated SQL queries
         return advisorRepository.findAll(pageable).map(advisorMapper::toDto);
     }
 
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public void deactivateUser(String employeeId) {
         User user = userRepository.findByEmployeeId(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
