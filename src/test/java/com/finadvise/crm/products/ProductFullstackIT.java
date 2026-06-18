@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
@@ -80,13 +82,16 @@ class ProductFullstackIT {
                 .provider(testProvider)
                 .build());
 
+        // Added page and size params, updated JSON paths to target the 'content' array
         mockMvc.perform(get("/api/v1/clients/{clientUid}/products", testClient.getClientUid())
+                        .param("page", "0")
+                        .param("size", "10")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clientUid").value(testClient.getClientUid()))
                 .andExpect(jsonPath("$.totalActive").value(1))
-                .andExpect(jsonPath("$.products", hasSize(1)))
-                .andExpect(jsonPath("$.products[0].name").value("Secure Future Plan"));
+                .andExpect(jsonPath("$.products.content", hasSize(1)))
+                .andExpect(jsonPath("$.products.content[0].name").value("Secure Future Plan"));
     }
 
     @Test
@@ -118,8 +123,9 @@ class ProductFullstackIT {
                 .andExpect(jsonPath("$.productTypeName").value("Life Insurance"))
                 .andExpect(jsonPath("$.providerName").value("Allianz"));
 
-        List<Product> savedProducts = productRepository.findAllByClientClientUid(testClient.getClientUid());
-        assertThat(savedProducts).hasSize(1);
+        Page<Product> savedProductsPage = productRepository.findAllByClientClientUid(
+                testClient.getClientUid(), PageRequest.of(0, 10));
+        assertThat(savedProductsPage.getContent()).hasSize(1);
     }
 
     @Test

@@ -225,7 +225,6 @@ class ProductServiceIT {
         ProductType type = productTypeRepository.save(ProductType.builder().name("ETF").build());
         Provider provider = providerRepository.save(Provider.builder().name("Vanguard").build());
 
-        // Product 1: No specific manager (defaults to primary)
         productRepository.save(Product.builder()
                 .name("S&P 500")
                 .amount(new BigDecimal("10000.00"))
@@ -240,7 +239,6 @@ class ProductServiceIT {
         clientRepository.save(testClient);
         clientRepository.flush();
 
-        // Product 2: Managed explicitly by the secondary advisor
         productRepository.save(Product.builder()
                 .name("Emerging Markets")
                 .amount(new BigDecimal("5000.00"))
@@ -256,9 +254,10 @@ class ProductServiceIT {
         clientRepository.save(testClient);
         clientRepository.flush();
 
-        ClientProductsDTO result = productService.getClientProducts(testClient.getClientUid(), primaryAdvisor.getEmployeeId());
+        ClientProductsDTO result = productService.getClientProducts(
+                testClient.getClientUid(), primaryAdvisor.getEmployeeId(), PageRequest.of(0, 10));
 
-        assertThat(result.products()).hasSize(2);
+        assertThat(result.products().getContent()).hasSize(2);
         assertThat(result.totalActive()).isEqualTo(2);
     }
 
@@ -299,16 +298,15 @@ class ProductServiceIT {
                 .managedBy(secondaryAdvisor)
                 .build());
 
-
         testClient.setAdvisor(primaryAdvisor);
         clientRepository.save(testClient);
         clientRepository.flush();
 
-        ClientProductsDTO result = productService.getClientProducts(testClient.getClientUid(), secondaryAdvisor.getEmployeeId());
+        ClientProductsDTO result = productService.getClientProducts(
+                testClient.getClientUid(), secondaryAdvisor.getEmployeeId(), PageRequest.of(0, 10));
 
-        // Secondary advisor should ONLY see the Silver ETF they manage
-        assertThat(result.products()).hasSize(1);
-        assertThat(result.products().getFirst().name()).isEqualTo("Silver ETF");
+        assertThat(result.products().getContent()).hasSize(1);
+        assertThat(result.products().getContent().getFirst().name()).isEqualTo("Silver ETF");
     }
 
     @Test
@@ -319,8 +317,9 @@ class ProductServiceIT {
                 115L, "EMP-0115", "10000015", "Rogue");
         Client testClient = testFixtureFactory.getOrCreateTestClient(
                 114L, "CLI-0114", "1000000014", "100000014", "Jackson", primaryAdvisor);
-
-        assertThatThrownBy(() -> productService.getClientProducts(testClient.getClientUid(), rogueAdvisor.getEmployeeId()))
+        
+        assertThatThrownBy(() -> productService.getClientProducts(
+                testClient.getClientUid(), rogueAdvisor.getEmployeeId(), PageRequest.of(0, 10)))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Client not found or access denied");
     }

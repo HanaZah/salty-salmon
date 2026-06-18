@@ -58,12 +58,14 @@ public class AssetFullstackIT {
         fixtureFactory.getOrCreateTestAsset("Byt Praha", testClient, realEstateType, 5000000);
         fixtureFactory.getOrCreateTestAsset("Chata", testClient, realEstateType, 1500000);
 
-        mockMvc.perform(get("/api/v1/clients/{clientUid}/assets", testClient.getClientUid()))
+        mockMvc.perform(get("/api/v1/clients/{clientUid}/assets", testClient.getClientUid())
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clientUid").value(testClient.getClientUid()))
                 .andExpect(jsonPath("$.totalValue").value(6500000))
-                .andExpect(jsonPath("$.assets").isArray())
-                .andExpect(jsonPath("$.assets.length()").value(2));
+                .andExpect(jsonPath("$.assets.content").isArray())
+                .andExpect(jsonPath("$.assets.content.length()").value(2));
     }
 
     @Test
@@ -147,9 +149,11 @@ public class AssetFullstackIT {
                 ))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/v1/clients/{clientUid}/assets", testClient.getClientUid()))
+        mockMvc.perform(get("/api/v1/clients/{clientUid}/assets", testClient.getClientUid())
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.assets.length()").value(0));
+                .andExpect(jsonPath("$.assets.content.length()").value(0));
     }
 
     @Test

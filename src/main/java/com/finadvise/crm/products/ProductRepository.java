@@ -1,5 +1,6 @@
 package com.finadvise.crm.products;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,7 +9,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
-import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
     Slice<Product> findByNextAnniversaryLessThan(LocalDate date, Pageable pageable);
@@ -52,7 +52,14 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     );
 
     boolean existsByClientClientUidAndManagedByEmployeeId(String clientUid, String employeeId);
+    Page<Product> findAllByClientClientUid(String clientUid, Pageable pageable);
+    Page<Product> findAllByClientClientUidAndManagedByEmployeeId(String clientUid, String employeeId, Pageable pageable);
 
-    List<Product> findAllByClientClientUidAndManagedByEmployeeId(String clientUid, String employeeId);
-    List<Product> findAllByClientClientUid(String clientUid);
+    @Query("SELECT COUNT(p) FROM Product p " +
+            "WHERE p.client.clientUid = :clientUid AND (p.endDate IS NULL OR p.endDate > CURRENT_DATE)")
+    Integer countActiveByClientUid(@Param("clientUid") String clientUid);
+
+    @Query("SELECT COUNT(p) FROM Product p " +
+            "WHERE p.client.clientUid = :clientUid AND p.managedBy.employeeId = :employeeId AND (p.endDate IS NULL OR p.endDate > CURRENT_DATE)")
+    Integer countActiveByClientUidAndAdvisor(@Param("clientUid") String clientUid, @Param("employeeId") String employeeId);
 }

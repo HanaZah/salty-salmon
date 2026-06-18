@@ -1,5 +1,7 @@
 package com.finadvise.crm.documents;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -42,7 +44,26 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
               OR m.employeeId = :employeeId
           )
     """)
-    List<Document> findSecurelyByClientUid(
+    Page<Document> findSecurelyByClientUid(
+            @Param("clientUid") String clientUid,
+            @Param("employeeId") String employeeId,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT COUNT(d) FROM Document d
+        JOIN d.client c
+        JOIN c.advisor a
+        LEFT JOIN d.product p
+        LEFT JOIN p.managedBy m
+        WHERE c.clientUid = :clientUid
+          AND d.isActive = true
+          AND (
+              a.employeeId = :employeeId
+              OR m.employeeId = :employeeId
+          )
+    """)
+    Integer countSecurelyByClientUid(
             @Param("clientUid") String clientUid,
             @Param("employeeId") String employeeId
     );

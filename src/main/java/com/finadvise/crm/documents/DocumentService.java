@@ -12,6 +12,8 @@ import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
 import org.apache.tika.mime.MimeTypes;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -191,11 +193,12 @@ public class DocumentService {
     }
 
     @Transactional(readOnly = true)
-    public List<DocumentDTO> getClientDocuments(String clientUid, String employeeId) {
-        return documentRepository.findSecurelyByClientUid(clientUid, employeeId)
-                .stream()
-                .map(documentMapper::toDto)
-                .toList();
+    public ClientDocumentsDTO getClientDocuments(String clientUid, String employeeId, Pageable pageable) {
+        Page<DocumentDTO> documentPage = documentRepository.findSecurelyByClientUid(clientUid, employeeId, pageable)
+                .map(documentMapper::toDto);
+        Integer totalDocuments = documentRepository.countSecurelyByClientUid(clientUid, employeeId);
+
+        return new ClientDocumentsDTO(clientUid, documentPage, totalDocuments);
     }
 
     @Transactional

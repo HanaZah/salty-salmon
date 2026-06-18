@@ -1,6 +1,5 @@
 package com.finadvise.crm.budget;
 
-import com.finadvise.crm.addresses.*;
 import com.finadvise.crm.clients.Client;
 import com.finadvise.crm.common.TestFixtureFactory;
 import com.finadvise.crm.users.Advisor;

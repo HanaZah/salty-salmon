@@ -34,9 +34,10 @@ public class ProductController {
     @GetMapping("/clients/{clientUid}/products")
     public ResponseEntity<ClientProductsDTO> getClientProducts(
             @PathVariable String clientUid,
-            Principal principal) {
+            Principal principal,
+            Pageable pageable) {
 
-        return ResponseEntity.ok(productService.getClientProducts(clientUid, principal.getName()));
+        return ResponseEntity.ok(productService.getClientProducts(clientUid, principal.getName(), pageable));
     }
 
     @Operation(summary = "Create Product", description = "Arranges a new financial product for the client.")

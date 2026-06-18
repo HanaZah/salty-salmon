@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -71,11 +72,12 @@ public class DocumentController {
             @ApiResponse(responseCode = "200", description = "List of documents retrieved successfully")
     })
     @GetMapping
-    public ResponseEntity<List<DocumentDTO>> getClientDocuments(
+    public ResponseEntity<ClientDocumentsDTO> getClientDocuments(
             @PathVariable String clientUid,
-            Principal principal) {
+            Principal principal,
+            Pageable pageable) {
 
-        return ResponseEntity.ok(documentService.getClientDocuments(clientUid, principal.getName()));
+        return ResponseEntity.ok(documentService.getClientDocuments(clientUid, principal.getName(), pageable));
     }
 
     @Operation(summary = "Get a specific document by ID")

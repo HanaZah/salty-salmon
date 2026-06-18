@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -31,8 +32,8 @@ public class AssetController {
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @GetMapping
-    public ClientAssetsDTO getClientAssets(@PathVariable String clientUid, Principal principal) {
-        return assetService.getClientsAssets(clientUid, principal.getName());
+    public ClientAssetsDTO getClientAssets(@PathVariable String clientUid, Principal principal, Pageable pageable) {
+        return assetService.getClientsAssets(clientUid, principal.getName(), pageable);
     }
 
     @Operation(summary = "Create Asset", description = "Adds a new asset to the client's portfolio.")

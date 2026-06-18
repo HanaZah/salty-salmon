@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -110,29 +109,25 @@ public class ProductService {
     }
 
     @Transactional
-    public ClientProductsDTO getClientProducts(String clientUid, String employeeId) {
+    public ClientProductsDTO getClientProducts(String clientUid, String employeeId, Pageable pageable) {
         if (!ownershipValidator.hasAnyReadAccessToClientProducts(clientUid, employeeId)) {
             throw new ResourceNotFoundException("Client not found or access denied");
         }
 
         boolean isPrimaryAdvisor = ownershipValidator.canAccessClient(clientUid, employeeId);
 
-        List<Product> authorizedProducts;
+        Page<ProductDTO> productPage;
+        Integer totalActive;
         if (isPrimaryAdvisor) {
-            authorizedProducts = productRepository.findAllByClientClientUid(clientUid);
+            productPage = productRepository.findAllByClientClientUid(clientUid, pageable).map(productMapper::toDto);
+            totalActive = productRepository.countActiveByClientUid(clientUid);
         } else {
-            authorizedProducts = productRepository.findAllByClientClientUidAndManagedByEmployeeId(clientUid, employeeId);
+            productPage = productRepository.findAllByClientClientUidAndManagedByEmployeeId(clientUid, employeeId, pageable)
+                    .map(productMapper::toDto);
+            totalActive = productRepository.countActiveByClientUidAndAdvisor(clientUid, employeeId);
         }
 
-        List<ProductDTO> productDTOs = authorizedProducts.stream()
-                .map(productMapper::toDto)
-                .toList();
-
-        Integer totalActive = (int) authorizedProducts.stream()
-                .filter(productMapper::isActive)
-                .count();
-
-        return new ClientProductsDTO(clientUid, productDTOs, totalActive);
+        return new ClientProductsDTO(clientUid, productPage, totalActive);
     }
 
     @Transactional(readOnly = true)

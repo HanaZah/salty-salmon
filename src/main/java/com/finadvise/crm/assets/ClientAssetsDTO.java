@@ -1,13 +1,9 @@
 package com.finadvise.crm.assets;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 public record ClientAssetsDTO(
         String clientUid,
-
-        List<AssetDTO> assets,
-
-        // Calculated by the service layer.
-        // Uses Long to prevent Integer Overflow from multiple high-value assets.
+        Page<AssetDTO> assets,
         Long totalValue
 ) {}

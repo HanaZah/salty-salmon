@@ -4,11 +4,11 @@ import com.finadvise.crm.clients.ClientRepository;
 import com.finadvise.crm.common.OwnershipValidator;
 import com.finadvise.crm.common.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -20,17 +20,17 @@ public class AssetService {
     private final ClientRepository clientRepository;
 
     @Transactional
-    public ClientAssetsDTO getClientsAssets(String clientUid, String employeeId) {
+    public ClientAssetsDTO getClientsAssets(String clientUid, String employeeId, Pageable pageable) {
         if(!ownershipValidator.canAccessClient(clientUid, employeeId)) {
             throw new AccessDeniedException("Client not found or access denied");
         }
 
         Long clientId = clientRepository.findIdByClientUid(clientUid)
                 .orElseThrow();
-        List<AssetDTO> assets = assetRepository.findAllByClientId(clientId).stream().map(assetMapper::toDto).toList();
-        Long totalValue = assets.stream().mapToLong(AssetDTO::value).sum();
+        Page<AssetDTO> assetsPage = assetRepository.findAllByClientId(clientId, pageable).map(assetMapper::toDto);
+        Long totalValue = assetRepository.sumValueByClientId(clientId);
 
-        return new ClientAssetsDTO(clientUid, assets, totalValue);
+        return new ClientAssetsDTO(clientUid, assetsPage, totalValue);
     }
 
     @Transactional

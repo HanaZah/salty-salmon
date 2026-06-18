@@ -147,12 +147,17 @@ class DocumentFullstackIT {
                 .client(testClient)
                 .build());
 
+        // Added pagination params and updated JSON paths for the new DTO wrapper
         mockMvc.perform(get("/api/v1/clients/{clientUid}/documents", testClient.getClientUid())
+                        .param("page", "0")
+                        .param("size", "10")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].fileName").value("identity.pdf"))
-                .andExpect(jsonPath("$[0].documentTypeName").value("Contract"));
+                .andExpect(jsonPath("$.clientUid").value(testClient.getClientUid()))
+                .andExpect(jsonPath("$.totalDocuments").value(1))
+                .andExpect(jsonPath("$.documents.content", hasSize(1)))
+                .andExpect(jsonPath("$.documents.content[0].fileName").value("identity.pdf"))
+                .andExpect(jsonPath("$.documents.content[0].documentTypeName").value("Contract"));
     }
 
     // --- 3. GET SINGLE ENDPOINT TESTS ---
