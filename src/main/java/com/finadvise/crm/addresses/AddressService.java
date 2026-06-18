@@ -21,7 +21,7 @@ public class AddressService {
      * creating new ones only if they don't already exist.
      */
     @Transactional
-    public AddressDTO findOrCreateAddress(AddressDTO dto) {
+    public AddressDTO findOrCreateAddress(AddressInputDTO dto) {
         if (dto == null) {
             return null;
         }

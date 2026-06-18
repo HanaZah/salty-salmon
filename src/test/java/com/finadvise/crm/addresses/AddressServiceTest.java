@@ -26,14 +26,14 @@ class AddressServiceTest {
     @InjectMocks
     private AddressService addressService;
 
-    private AddressDTO inputDto;
+    private AddressInputDTO inputDto;
     private City mockCity;
     private Street mockStreet;
     private Address mockAddress;
 
     @BeforeEach
     void setUp() {
-        inputDto = new AddressDTO(null, "Vodičkova", "123/45a", "Praha", "110 00");
+        inputDto = new AddressInputDTO("Vodičkova", "123/45a", "Praha", "110 00");
 
         mockCity = City.builder().id(1L).name("Praha").psc("110 00").build();
         mockStreet = Street.builder().id(10L).name("Vodičkova").city(mockCity).build();
@@ -91,7 +91,7 @@ class AddressServiceTest {
     void findOrCreateAddress_ValidationFails() {
         // Arrange
         doThrow(new AddressValidationException("Invalid RÚIAN address"))
-                .when(addressValidator).validate(any(AddressDTO.class));
+                .when(addressValidator).validate(any(AddressInputDTO.class));
 
         // Act & Assert
         assertThrows(AddressValidationException.class, () -> addressService.findOrCreateAddress(inputDto));

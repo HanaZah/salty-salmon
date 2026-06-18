@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 @Profile("!prod")
 public class MockAddressValidator implements ExternalAddressValidator{
     @Override
-    public void validate(AddressDTO address) {
+    public void validate(AddressInputDTO address) {
         // Empty dummy, in dev we relay on partial validation in DTO
     }
 }

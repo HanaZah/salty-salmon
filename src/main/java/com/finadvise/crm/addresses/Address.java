@@ -33,4 +33,15 @@ public class Address {
     @JoinColumn(name = "STREET_ID", nullable = false, updatable = false)
     @NotNull(message = "Street is required")
     private Street street;
+
+    public boolean matches(String targetStreet, String targetHouseNumber, String targetCity, String targetPostalCode) {
+        if (this.street == null || this.street.getCity() == null) {
+            return false;
+        }
+
+        return this.houseNumber.equals(targetHouseNumber) &&
+                this.street.getName().equals(targetStreet) &&
+                this.street.getCity().getName().equals(targetCity) &&
+                this.street.getCity().getPsc().equals(targetPostalCode);
+    }
 }

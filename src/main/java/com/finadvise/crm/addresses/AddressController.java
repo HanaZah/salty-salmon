@@ -32,7 +32,7 @@ public class AddressController {
     })
     @PostMapping
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<AddressDTO> create(@Valid @RequestBody AddressDTO dto) {
+    public ResponseEntity<AddressDTO> create(@Valid @RequestBody AddressInputDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(addressService.findOrCreateAddress(dto));
     }
 
