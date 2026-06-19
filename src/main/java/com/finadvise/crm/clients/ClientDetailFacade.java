@@ -5,8 +5,6 @@ import com.finadvise.crm.assets.AssetService;
 import com.finadvise.crm.assets.ClientAssetsDTO;
 import com.finadvise.crm.budget.BudgetFullDTO;
 import com.finadvise.crm.budget.BudgetService;
-import com.finadvise.crm.common.OwnershipValidator;
-import com.finadvise.crm.common.ResourceNotFoundException;
 import com.finadvise.crm.documents.ClientDocumentsDTO;
 import com.finadvise.crm.documents.DocumentService;
 import com.finadvise.crm.products.ClientProductsDTO;

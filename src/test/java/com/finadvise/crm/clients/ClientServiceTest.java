@@ -55,7 +55,6 @@ class ClientServiceTest {
 
     private static final String CLIENT_UID = "UID12345";
     private static final String EMPLOYEE_ID = "EMP999";
-    private static final LocalDate TODAY = LocalDate.of(2026, 4, 26);
 
     @BeforeEach
     void setupClock() {
