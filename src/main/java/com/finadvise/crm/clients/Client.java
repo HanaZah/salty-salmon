@@ -32,11 +32,17 @@ public class Client implements Persistable<Long> {
     @Column(name = "BIRTH_DATE", nullable = false)
     private LocalDate birthDate;
 
+    @Column(name = "NEXT_BIRTHDAY", nullable = false)
+    private LocalDate nextBirthday;
+
     @Column(name = "FIRST_NAME", nullable = false, length = 50)
     private String firstName;
 
     @Column(name = "LAST_NAME", nullable = false, length = 50)
     private String lastName;
+
+    @Column(name = "OCCUPATION", nullable = false, length = 100)
+    private String occupation;
 
     @Column(name = "PHONE", nullable = false, length = 20)
     private String phone;
