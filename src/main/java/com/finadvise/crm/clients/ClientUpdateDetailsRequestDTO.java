@@ -50,5 +50,8 @@ public record ClientUpdateDetailsRequestDTO(
 
         @NotNull(message = "Contact address must be provided")
         @Valid
-        AddressInputDTO contactAddress
+        AddressInputDTO contactAddress,
+
+        @NotNull(message = "Version is required for concurrency control")
+        Integer version
 ) {}

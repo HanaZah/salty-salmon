@@ -1,10 +1,7 @@
 package com.finadvise.crm.clients;
 
 import com.finadvise.crm.addresses.*;
-import com.finadvise.crm.common.ObfuscatedIdGenerator;
-import com.finadvise.crm.common.OwnershipValidator;
-import com.finadvise.crm.common.ResourceConflictException;
-import com.finadvise.crm.common.ResourceNotFoundException;
+import com.finadvise.crm.common.*;
 import com.finadvise.crm.users.Advisor;
 import com.finadvise.crm.users.AdvisorRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -123,7 +121,7 @@ class ClientServiceTest {
         when(request.idCardExpiryDate()).thenReturn(LocalDate.of(2020, 1, 1)); // Expiry before issue
 
         assertThatThrownBy(() -> clientService.createClient(request, EMPLOYEE_ID, false))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(InvalidInputValueException.class)
                 .hasMessageContaining("must precede");
     }
 
@@ -195,5 +193,143 @@ class ClientServiceTest {
         // Due to the Specification being an anonymous lambda in ClientSpecifications,
         // we primarily verify the repository was called after the security override block.
         verify(searchMinimalRepository).findAll(any(Specification.class), eq(pageable));
+    }
+
+    // --- UPDATE DETAILS TESTS ---
+
+    @Test
+    void updateClientDetails_Success_UpdatesFieldsAndAddresses() {
+        // Arrange
+        String uid = "CLI-123";
+        String employeeId = "ADV-001";
+        Integer currentVersion = 1;
+
+        Client existingClient = new Client();
+        existingClient.setId(10L);
+        existingClient.setClientUid(uid);
+        existingClient.setVersion(currentVersion);
+
+        AddressInputDTO newAddressInput = new AddressInputDTO("New St", "1", "City", "10000");
+        ClientUpdateDetailsRequestDTO request = new ClientUpdateDetailsRequestDTO(
+                "UpdatedFirst", "UpdatedLast", "NewJob", "+420111222333", "new@test.com",
+                newAddressInput, newAddressInput, currentVersion
+        );
+
+        AddressDTO mockAddressDto = new AddressDTO(99L, "New St", "1", "City", "10000");
+        Address mockAddressEntity = new Address();
+        mockAddressEntity.setId(99L);
+
+        when(ownershipValidator.canAccessClient(uid, employeeId)).thenReturn(true);
+        when(clientRepository.findByClientUidAndIsActiveTrue(uid)).thenReturn(Optional.of(existingClient));
+        when(addressService.findOrCreateAddress(any())).thenReturn(mockAddressDto);
+        when(addressRepository.getReferenceById(99L)).thenReturn(mockAddressEntity);
+
+        // Act
+        clientService.updateClientDetails(uid, request, employeeId);
+
+        // Assert
+        assertThat(existingClient.getFirstName()).isEqualTo("UpdatedFirst");
+        assertThat(existingClient.getLastName()).isEqualTo("UpdatedLast");
+        assertThat(existingClient.getOccupation()).isEqualTo("NewJob");
+        assertThat(existingClient.getPermanentAddress()).isEqualTo(mockAddressEntity);
+        assertThat(existingClient.getContactAddress()).isEqualTo(mockAddressEntity);
+
+        verify(addressService, times(2)).findOrCreateAddress(any());
+    }
+
+    @Test
+    void updateClientDetails_Fails_WhenOptimisticLockingMismatches() {
+        // Arrange
+        String uid = "CLI-123";
+        String employeeId = "ADV-001";
+        Integer dbVersion = 2;
+        Integer requestVersion = 1; // Stale data
+
+        Client existingClient = new Client();
+        existingClient.setId(10L);
+        existingClient.setVersion(dbVersion);
+
+        ClientUpdateDetailsRequestDTO request = new ClientUpdateDetailsRequestDTO(
+                "First", "Last", "Job", "+420111", "test@test.com",
+                null, null, requestVersion
+        );
+
+        when(ownershipValidator.canAccessClient(uid, employeeId)).thenReturn(true);
+        when(clientRepository.findByClientUidAndIsActiveTrue(uid)).thenReturn(Optional.of(existingClient));
+
+        // Act & Assert
+        assertThatThrownBy(() -> clientService.updateClientDetails(uid, request, employeeId))
+                .isInstanceOf(ObjectOptimisticLockingFailureException.class);
+
+        verifyNoInteractions(addressService);
+    }
+
+    // --- UPDATE ID CARD TESTS ---
+
+    @Test
+    void updateClientIdCard_Success_UpdatesFields() {
+        String uid = "CLI-123";
+        String employeeId = "ADV-001";
+        Integer currentVersion = 1;
+
+        Client existingClient = new Client();
+        existingClient.setId(10L);
+        existingClient.setVersion(currentVersion);
+
+        LocalDate issue = LocalDate.now().minusYears(1);
+        LocalDate expiry = LocalDate.now().plusYears(9);
+        ClientUpdateIdCardRequestDTO request = new ClientUpdateIdCardRequestDTO(
+                "111222333", issue, expiry, "Ministry", currentVersion
+        );
+
+        when(ownershipValidator.canAccessClient(uid, employeeId)).thenReturn(true);
+        when(clientRepository.findByClientUidAndIsActiveTrue(uid)).thenReturn(Optional.of(existingClient));
+
+        clientService.updateClientIdCard(uid, request, employeeId);
+
+        assertThat(existingClient.getIdCardNumber()).isEqualTo("111222333");
+        assertThat(existingClient.getIdCardIssueDate()).isEqualTo(issue);
+        assertThat(existingClient.getIdCardExpiryDate()).isEqualTo(expiry);
+        assertThat(existingClient.getIdCardIssuer()).isEqualTo("Ministry");
+    }
+
+    @Test
+    void updateClientIdCard_Fails_WhenIssueDateAfterExpiryDate() {
+        String uid = "CLI-123";
+        String employeeId = "ADV-001";
+        Integer currentVersion = 1;
+
+        Client existingClient = new Client();
+        existingClient.setId(10L);
+        existingClient.setVersion(currentVersion);
+
+        LocalDate issue = LocalDate.now().plusYears(1);
+        LocalDate expiry = LocalDate.now(); // Expiry before issue
+
+        ClientUpdateIdCardRequestDTO request = new ClientUpdateIdCardRequestDTO(
+                "111222333", issue, expiry, "Ministry", currentVersion
+        );
+
+        when(ownershipValidator.canAccessClient(uid, employeeId)).thenReturn(true);
+        when(clientRepository.findByClientUidAndIsActiveTrue(uid)).thenReturn(Optional.of(existingClient));
+
+        assertThatThrownBy(() -> clientService.updateClientIdCard(uid, request, employeeId))
+                .isInstanceOf(InvalidInputValueException.class)
+                .hasMessageContaining("issue date must precede the expiry date");
+    }
+
+    @Test
+    void updateClientIdCard_Fails_WhenClientNotFoundOrDenied() {
+        String uid = "CLI-123";
+        String employeeId = "ROGUE-001";
+
+        ClientUpdateIdCardRequestDTO request = new ClientUpdateIdCardRequestDTO(
+                "111222333", LocalDate.now().minusYears(1), LocalDate.now().plusYears(1), "Ministry", 1
+        );
+
+        when(ownershipValidator.canAccessClient(uid, employeeId)).thenReturn(false);
+
+        assertThatThrownBy(() -> clientService.updateClientIdCard(uid, request, employeeId))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }

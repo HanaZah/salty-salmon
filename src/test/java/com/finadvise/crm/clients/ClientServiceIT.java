@@ -116,7 +116,7 @@ class ClientServiceIT {
 
         ClientUpdateDetailsRequestDTO payload = new ClientUpdateDetailsRequestDTO(
                 "UpdatedName", "NewLastName", "NewOccupation", "+420987654321", "new@test.com",
-                newPermAddress, oldContactAddress
+                newPermAddress, oldContactAddress, testClient.getVersion()
         );
 
         clientService.updateClientDetails(testClient.getClientUid(), payload, testAdvisor.getEmployeeId());
@@ -138,7 +138,8 @@ class ClientServiceIT {
                 205L, "CLI-0205", "8001016666", "666666666", "CardHolder", testAdvisor);
 
         ClientUpdateIdCardRequestDTO payload = new ClientUpdateIdCardRequestDTO(
-                "123123123", LocalDate.now().minusDays(5), LocalDate.now().plusYears(5), "New Issuer"
+                "123123123", LocalDate.now().minusDays(5), LocalDate.now().plusYears(5),
+                "New Issuer", testClient.getVersion()
         );
 
         clientService.updateClientIdCard(testClient.getClientUid(), payload, testAdvisor.getEmployeeId());

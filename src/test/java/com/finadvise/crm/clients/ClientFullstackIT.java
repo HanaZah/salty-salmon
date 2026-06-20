@@ -180,7 +180,7 @@ class ClientFullstackIT {
 
         ClientUpdateDetailsRequestDTO payload = new ClientUpdateDetailsRequestDTO(
                 "UpdatedName", "UpdatedLastName", "UpdatedOccupation", "+420987654321", "updated@test.com",
-                permAddress, contactAddress
+                permAddress, contactAddress, testClient.getVersion()
         );
 
         mockMvc.perform(put("/api/v1/clients/{clientUid}/details", testClient.getClientUid())
@@ -198,7 +198,7 @@ class ClientFullstackIT {
         AddressInputDTO validAddress = new AddressInputDTO("Main Street", "123", "Prague", "110 00");
         ClientUpdateDetailsRequestDTO payload = new ClientUpdateDetailsRequestDTO(
                 "HackedName", "HackedLastName", "Hacker", "+420000000000", "hack@test.com",
-                validAddress, validAddress
+                validAddress, validAddress, testClient.getVersion()
         );
 
         mockMvc.perform(put("/api/v1/clients/{clientUid}/details", testClient.getClientUid())
@@ -208,13 +208,35 @@ class ClientFullstackIT {
                 .andExpect(jsonPath("$.title").value("Resource Not Found"));
     }
 
+    @Test
+    @WithMockUser(username = "ADV-0401", authorities = "ADVISOR")
+    void updateClientDetails_Fails_Returns409_WhenOptimisticLockingMismatches() throws Exception {
+        AddressInputDTO validAddress = new AddressInputDTO("Main Street", "123", "Prague", "110 00");
+
+        // Simulating a stale payload by providing a version number guaranteed to mismatch
+        Integer staleVersion = 999999;
+
+        ClientUpdateDetailsRequestDTO stalePayload = new ClientUpdateDetailsRequestDTO(
+                "StaleName", "StaleLastName", "StaleOccupation", "+420000000000", "stale@test.com",
+                validAddress, validAddress, staleVersion
+        );
+
+        mockMvc.perform(put("/api/v1/clients/{clientUid}/details", testClient.getClientUid())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(stalePayload)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Concurrent Update Conflict"))
+                .andExpect(jsonPath("$.type").value("https://api.finadvise.com/errors/concurrent-update"));
+    }
+
     // --- UPDATE ID CARD TESTS ---
 
     @Test
     @WithMockUser(username = "ADV-0401", authorities = "ADVISOR")
     void updateClientIdCard_Success_Returns204NoContent() throws Exception {
         ClientUpdateIdCardRequestDTO payload = new ClientUpdateIdCardRequestDTO(
-                "999888777", LocalDate.now().minusYears(1), LocalDate.now().plusYears(9), "New City Hall"
+                "999888777", LocalDate.now().minusYears(1), LocalDate.now().plusYears(9),
+                "New City Hall", testClient.getVersion()
         );
 
         mockMvc.perform(put("/api/v1/clients/{clientUid}/id-card", testClient.getClientUid())
@@ -224,6 +246,24 @@ class ClientFullstackIT {
 
         Client updatedClient = clientRepository.findByClientUidAndIsActiveTrue(testClient.getClientUid()).orElseThrow();
         assertThat(updatedClient.getIdCardNumber()).isEqualTo("999888777");
+    }
+
+    @Test
+    @WithMockUser(username = "ADV-0401", authorities = "ADVISOR")
+    void updateClientIdCard_Fails_Returns409_WhenOptimisticLockingMismatches() throws Exception {
+        // Simulating a stale payload with a version number guaranteed to mismatch
+        Integer staleVersion = 99999;
+
+        ClientUpdateIdCardRequestDTO stalePayload = new ClientUpdateIdCardRequestDTO(
+                "999888777", LocalDate.now().minusYears(2), LocalDate.now().plusYears(8), "Ministry", staleVersion
+        );
+
+        mockMvc.perform(put("/api/v1/clients/{clientUid}/id-card", testClient.getClientUid())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(stalePayload)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Concurrent Update Conflict"))
+                .andExpect(jsonPath("$.type").value("https://api.finadvise.com/errors/concurrent-update"));
     }
 
     // --- DELETE CLIENT TESTS ---

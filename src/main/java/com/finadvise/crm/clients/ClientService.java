@@ -10,11 +10,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -61,6 +63,8 @@ public class ClientService {
     public void updateClientDetails(String clientUid, ClientUpdateDetailsRequestDTO request, String employeeId) {
         Client client = getClientEntityByUidSecured(clientUid, employeeId);
 
+        verifyOptimisticLock(client, request.version());
+
         client.setFirstName(request.firstName());
         client.setLastName(request.lastName());
         client.setOccupation(request.occupation());
@@ -101,8 +105,10 @@ public class ClientService {
     public void updateClientIdCard(String clientUid, ClientUpdateIdCardRequestDTO request, String employeeId) {
         Client client = getClientEntityByUidSecured(clientUid, employeeId);
 
+        verifyOptimisticLock(client, request.version());
+
         if (request.idCardIssueDate().isAfter(request.idCardExpiryDate())) {
-            throw new IllegalArgumentException("ID card issue date must precede the expiry date.");
+            throw new InvalidInputValueException("ID card issue date must precede the expiry date.");
         }
 
         client.setIdCardNumber(request.idCardNumber());
@@ -200,5 +206,14 @@ public class ClientService {
         Page<ClientSearchMinimal> results = searchMinimalRepository.findAll(spec, pageable);
 
         return results.map(clientMapper::toSearchMinimalDto);
+    }
+
+    private void verifyOptimisticLock(Client client, Integer requestedVersion) {
+        if (requestedVersion == null) {
+            throw new MissingVersionException("Version must be provided for updates.");
+        }
+        if (!client.getVersion().equals(requestedVersion)) {
+            throw new ObjectOptimisticLockingFailureException(Client.class, Objects.requireNonNull(client.getId()));
+        }
     }
 }

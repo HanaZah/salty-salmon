@@ -24,5 +24,8 @@ public record ClientUpdateIdCardRequestDTO(
                 message = "ID card issuer contains invalid characters." +
                         "Please use only standard letters, numbers, and basic punctuation."
         )
-        String idCardIssuer
+        String idCardIssuer,
+
+        @NotNull(message = "Version is required for concurrency control")
+        Integer version
 ) {}
