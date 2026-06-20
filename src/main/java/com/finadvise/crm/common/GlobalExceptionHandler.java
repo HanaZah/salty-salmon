@@ -147,7 +147,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(DmsUnavailableException.class)
-    public ResponseEntity<ProblemDetail> handleDmsUnavailable(DmsUnavailableException ex) {
+    public ResponseEntity<ProblemDetail> handleDmsUnavailable() {
         // 503 Service Unavailable is standard for downstream infrastructure failures (like AWS S3)
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
                 "The document management system is currently unavailable. Please try again later.");
