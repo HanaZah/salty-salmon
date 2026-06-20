@@ -7,6 +7,11 @@ import jakarta.validation.constraints.Size;
 public record AddressInputDTO(
         @NotBlank(message = "Street name is required")
         @Size(max = 100)
+        @Pattern(
+                regexp = "^[\\p{L}\\p{M}\\s\\-']+$",
+                message = "Street name contains invalid characters. " +
+                        "Please use only standard letters and basic punctuation."
+        )
         String street,
 
         @NotBlank(message = "House number is required")
@@ -19,6 +24,11 @@ public record AddressInputDTO(
 
         @NotBlank(message = "City name is required")
         @Size(max = 100)
+        @Pattern(
+                regexp = "^[\\p{L}\\p{M}\\s\\-']+$",
+                message = "City name contains invalid characters." +
+                        "Please use only standard letters, hyphen or apostrophes."
+        )
         String city,
 
         @NotBlank(message = "Postal code (PSČ) is required")

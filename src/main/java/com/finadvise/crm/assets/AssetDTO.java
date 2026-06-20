@@ -1,11 +1,7 @@
 package com.finadvise.crm.assets;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 public record AssetDTO(
 
@@ -13,6 +9,11 @@ public record AssetDTO(
 
         @NotBlank(message = "Asset name is required")
         @Size(max = 100, message = "Name must not exceed 100 characters")
+        @Pattern(
+                regexp = "^[\\p{L}\\p{M}\\p{N}\\s\\-.,']+$",
+                message = "Asset name contains invalid characters. " +
+                        "Please use only standard letters, numbers, and basic punctuation."
+        )
         String name,
 
         @NotNull(message = "Asset value is required")
@@ -21,6 +22,11 @@ public record AssetDTO(
         Integer value,
 
         @Size(max = 256, message = "Note must not exceed 256 characters")
+        @Pattern(
+                regexp = "^[\\p{L}\\p{M}\\p{N}\\s\\-.,'/]+$",
+                message = "Note contains invalid characters. " +
+                        "Please use only standard letters, numbers, and basic punctuation."
+        )
         String note,
 
         @NotNull(message = "Asset type ID is required")

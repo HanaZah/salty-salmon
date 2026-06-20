@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 public record ClientUpdateIdCardRequestDTO(
         @NotBlank(message = "ID card number is required")
+        @Pattern(regexp = "^\\d{9}$", message = "ID card number must be exactly 9 digits")
         String idCardNumber,
 
         @NotNull(message = "Issue date is required")
@@ -18,5 +19,10 @@ public record ClientUpdateIdCardRequestDTO(
 
         @NotBlank(message = "Issuer is required")
         @Size(max = 100, message = "Issuer name cannot exceed 100 characters")
+        @Pattern(
+                regexp = "^[\\p{L}\\p{M}\\p{N}\\s\\-.,'/]+$",
+                message = "ID card issuer contains invalid characters." +
+                        "Please use only standard letters, numbers, and basic punctuation."
+        )
         String idCardIssuer
 ) {}
