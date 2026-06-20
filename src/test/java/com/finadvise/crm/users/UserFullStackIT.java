@@ -45,7 +45,9 @@ class UserFullStackIT {
     @Test
     @WithMockUser(authorities = "ADMIN")
     void createNewAdmin_Returns200AndDto_WhenUserIsAdmin() throws Exception {
-        CreateAdminRequestDTO request = new CreateAdminRequestDTO("Bob", "Builder", "bob@builder.com", "SecurePass1!");
+        CreateAdminRequestDTO request = new CreateAdminRequestDTO(
+                "Bob", "Builder", "bob@builder.com", "123456789", "SecurePass1!"
+        );
 
         mockMvc.perform(post("/api/v1/users/new/admin")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -63,7 +65,9 @@ class UserFullStackIT {
         existingUser.setEmail("conflict@mail.com");
         advisorRepository.save(existingUser);
 
-        CreateAdminRequestDTO request = new CreateAdminRequestDTO("Test", "User", "conflict@mail.com", "Pass!");
+        CreateAdminRequestDTO request = new CreateAdminRequestDTO(
+                "Test", "User", "conflict@mail.com", "123456789","PassWord!"
+        );
 
         mockMvc.perform(post("/api/v1/users/new/admin")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -76,7 +80,7 @@ class UserFullStackIT {
     @WithMockUser(authorities = "ADMIN")
     void createNewAdvisor_Returns200AndDto_WhenUserIsAdmin() throws Exception {
         CreateAdvisorRequestDTO request = new CreateAdvisorRequestDTO(
-                "Alice", "Smith", "11223344", "alice@finadvise.com", "1112223333", "Pass123"
+                "Alice", "Smith", "11223344", "alice@finadvise.com", "1112223333", "Pass123!"
         );
 
         mockMvc.perform(post("/api/v1/users/new/advisor")

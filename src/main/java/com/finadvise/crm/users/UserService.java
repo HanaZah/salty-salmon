@@ -82,6 +82,7 @@ public class UserService implements UserDetailsService {
                 .employeeId(employeeId)
                 .passwordHash(passwordEncoder.encode(request.rawPassword()))
                 .email(request.email())
+                .phone(request.phone())
                 .firstName(request.firstName())
                 .lastName(request.lastName())
                 .isActive(true)

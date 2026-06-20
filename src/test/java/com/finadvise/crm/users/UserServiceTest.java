@@ -92,7 +92,9 @@ class UserServiceTest {
 
     @Test
     void createAdmin_ThrowsException_WhenEmailAlreadyExists() {
-        CreateAdminRequestDTO request = new CreateAdminRequestDTO("Jane", "Doe", "jane@finadvise.com", "Pass123");
+        CreateAdminRequestDTO request = new CreateAdminRequestDTO(
+                "Jane", "Doe", "jane@finadvise.com", "123456789", "Pass123"
+        );
         when(userRepository.existsByEmail("jane@finadvise.com")).thenReturn(true);
 
         assertThatThrownBy(() -> userService.createAdmin(request))
@@ -102,7 +104,9 @@ class UserServiceTest {
 
     @Test
     void createAdmin_SavesAndReturnsDto_OnValidRequest() {
-        CreateAdminRequestDTO request = new CreateAdminRequestDTO("Jane", "Doe", "jane@finadvise.com", "Pass123");
+        CreateAdminRequestDTO request = new CreateAdminRequestDTO(
+                "Jane", "Doe", "jane@finadvise.com", "123456789", "Pass123"
+        );
         Admin savedAdmin = Admin.builder().employeeId("ADM-100").build();
         AdminDTO expectedDto = new AdminDTO("ADM-100", "Jane@Doe.mail", "Jane", "Doe");
 
