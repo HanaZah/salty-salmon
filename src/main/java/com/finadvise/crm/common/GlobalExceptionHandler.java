@@ -171,4 +171,12 @@ public class GlobalExceptionHandler {
         problem.setType(URI.create(BASE_URL + "batch-processing-failure"));
         return ResponseEntity.of(problem).build();
     }
+
+    @ExceptionHandler(InvalidInputValueException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidInput(InvalidInputValueException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problem.setTitle("Invalid Input Value");
+        problem.setType(URI.create(BASE_URL + "invalid-input-value"));
+        return ResponseEntity.of(problem).build();
+    }
 }

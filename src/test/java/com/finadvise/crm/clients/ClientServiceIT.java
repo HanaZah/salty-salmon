@@ -47,10 +47,10 @@ class ClientServiceIT {
         ClientCreateRequestDTO payload = new ClientCreateRequestDTO(
                 "8001011234", VALID_BIRTH_DATE, "John", "Doe", "Developer", "+420123456789", "john@test.com",
                 "123456789", LocalDate.now().minusDays(10), LocalDate.now().plusYears(10), "Ministry",
-                validAddress, validAddress
+                validAddress, validAddress, null
         );
 
-        ClientDetailDTO result = clientService.createClient(payload, testAdvisor.getEmployeeId());
+        ClientDetailDTO result = clientService.createClient(payload, testAdvisor.getEmployeeId(), false);
 
         assertThat(result.clientUid()).isNotNull();
         assertThat(result.personalId()).isEqualTo("8001011234");
@@ -72,10 +72,10 @@ class ClientServiceIT {
         ClientCreateRequestDTO payload = new ClientCreateRequestDTO(
                 "8001019999", VALID_BIRTH_DATE, "Jane", "Doe", "Teacher", "+420123456789", "jane@test.com",
                 "111222333", LocalDate.now().minusDays(10), LocalDate.now().plusYears(10), "Ministry",
-                validAddress, validAddress
+                validAddress, validAddress, null
         );
 
-        assertThatThrownBy(() -> clientService.createClient(payload, testAdvisor.getEmployeeId()))
+        assertThatThrownBy(() -> clientService.createClient(payload, testAdvisor.getEmployeeId(), false))
                 .isInstanceOf(ResourceConflictException.class)
                 .hasMessageContaining("Client with this personal ID already exists");
     }
@@ -89,10 +89,10 @@ class ClientServiceIT {
         ClientCreateRequestDTO payload = new ClientCreateRequestDTO(
                 "8001018888", VALID_BIRTH_DATE, "Jack", "Smith", "Driver", "+420123456789", "jack@test.com",
                 "444555666", LocalDate.now(), LocalDate.now().minusDays(1), "Ministry",
-                validAddress, validAddress
+                validAddress, validAddress, null
         );
 
-        assertThatThrownBy(() -> clientService.createClient(payload, testAdvisor.getEmployeeId()))
+        assertThatThrownBy(() -> clientService.createClient(payload, testAdvisor.getEmployeeId(), false))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("ID card issue date must precede the expiry date");
     }

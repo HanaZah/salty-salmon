@@ -43,12 +43,13 @@ class ClientFullstackIT {
     @Autowired private TestFixtureFactory testFixtureFactory;
 
     private Client testClient;
+    private Advisor primaryAdvisor;
 
     private static final LocalDate VALID_BIRTH_DATE = LocalDate.now().minusYears(30);
 
     @BeforeEach
     void setUp() {
-        Advisor primaryAdvisor = testFixtureFactory.getOrCreateTestAdvisor(
+        primaryAdvisor = testFixtureFactory.getOrCreateTestAdvisor(
                 401L, "ADV-0401", "44444441", "PrimaryOwner");
 
         testClient = testFixtureFactory.getOrCreateTestClient(
@@ -87,7 +88,7 @@ class ClientFullstackIT {
         ClientCreateRequestDTO payload = new ClientCreateRequestDTO(
                 "9001011234", VALID_BIRTH_DATE, "John", "Doe", "Developer", "+420123456789", "john@test.com",
                 "123456789", LocalDate.now().minusDays(10), LocalDate.now().plusYears(10), "Ministry",
-                validAddress, validAddress
+                validAddress, validAddress, null
         );
 
         mockMvc.perform(post("/api/v1/clients")
@@ -106,7 +107,7 @@ class ClientFullstackIT {
         ClientCreateRequestDTO payload = new ClientCreateRequestDTO(
                 testClient.getPersonalId(), VALID_BIRTH_DATE, "Jane", "Doe", "Developer", "+420123456789", "jane@test.com",
                 "987654321", LocalDate.now().minusDays(10), LocalDate.now().plusYears(10), "Ministry",
-                validAddress, validAddress
+                validAddress, validAddress, null
         );
 
         mockMvc.perform(post("/api/v1/clients")
@@ -124,7 +125,7 @@ class ClientFullstackIT {
         ClientCreateRequestDTO invalidPayload = new ClientCreateRequestDTO(
                 "", VALID_BIRTH_DATE, "", "Doe", "Developer", "+420123456789", "invalid-email",
                 "123456789", LocalDate.now().minusDays(10), LocalDate.now().plusYears(10), "Ministry",
-                validAddress, validAddress
+                validAddress, validAddress, null
         );
 
         mockMvc.perform(post("/api/v1/clients")
@@ -133,6 +134,40 @@ class ClientFullstackIT {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Validation Failed"))
                 .andExpect(jsonPath("$.errors").exists());
+    }
+
+    @Test
+    @WithMockUser(username = "ADMIN-0403", authorities = "ADMIN")
+    void createClient_SuccessAsAdmin_WhenTargetAdvisorProvided() throws Exception {
+        AddressInputDTO validAddress = new AddressInputDTO("Admin Street", "1", "Prague", "110 00");
+        ClientCreateRequestDTO payload = new ClientCreateRequestDTO(
+                "9001015555", VALID_BIRTH_DATE, "AdminCreated", "Client", "Tester", "+420123456789", "admin@test.com",
+                "555666777", LocalDate.now().minusDays(10), LocalDate.now().plusYears(10), "Ministry",
+                validAddress, validAddress, primaryAdvisor.getEmployeeId() // <-- Admin specifies target
+        );
+
+        mockMvc.perform(post("/api/v1/clients")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.personalId").value("9001015555"));
+    }
+
+    @Test
+    @WithMockUser(username = "ADMIN-0403", authorities = "ADMIN")
+    void createClient_FailsAsAdmin_WhenTargetAdvisorMissing() throws Exception {
+        AddressInputDTO validAddress = new AddressInputDTO("Admin Street", "1", "Prague", "110 00");
+        ClientCreateRequestDTO payload = new ClientCreateRequestDTO(
+                "9001016666", VALID_BIRTH_DATE, "AdminCreated", "Client", "Tester", "+420123456789", "admin@test.com",
+                "666777888", LocalDate.now().minusDays(10), LocalDate.now().plusYears(10), "Ministry",
+                validAddress, validAddress, null // <-- Missing target
+        );
+
+        mockMvc.perform(post("/api/v1/clients")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest()) // Handled by standard exception handlers
+                .andExpect(jsonPath("$.detail").value("Administrators must explicitly provide an advisorEmployeeId when creating a client."));
     }
 
     // --- UPDATE DETAILS TESTS ---

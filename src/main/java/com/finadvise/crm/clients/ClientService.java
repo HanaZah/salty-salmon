@@ -1,10 +1,7 @@
 package com.finadvise.crm.clients;
 
 import com.finadvise.crm.addresses.*;
-import com.finadvise.crm.common.ObfuscatedIdGenerator;
-import com.finadvise.crm.common.OwnershipValidator;
-import com.finadvise.crm.common.ResourceConflictException;
-import com.finadvise.crm.common.ResourceNotFoundException;
+import com.finadvise.crm.common.*;
 import com.finadvise.crm.users.Advisor;
 import com.finadvise.crm.users.AdvisorRepository;
 import lombok.RequiredArgsConstructor;
@@ -40,15 +37,13 @@ public class ClientService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ClientDashboardSummary> getRecentClientSummaries(String employeeId, String userType, int pageSize) {
+    public Page<ClientDashboardSummary> getRecentClientSummaries(String employeeId, boolean isAdmin, int pageSize) {
         Pageable pageable = PageRequest.of(0, pageSize, Sort.by(Sort.Direction.DESC, "lastUpdate"));
 
-        if ("ADMIN".equalsIgnoreCase(userType)) {
+        if (isAdmin) {
             return clientRepository.findAllClientSummaries(pageable);
-        } else if ("ADVISOR".equalsIgnoreCase(userType)) {
-            return clientRepository.findClientSummariesByEmployeeId(employeeId, pageable);
         } else {
-            throw new IllegalArgumentException("Unsupported user type for dashboard summaries: " + userType);
+            return clientRepository.findClientSummariesByEmployeeId(employeeId, pageable);
         }
     }
 
@@ -118,17 +113,25 @@ public class ClientService {
     }
 
     @Transactional
-    public ClientDetailDTO createClient(ClientCreateRequestDTO request, String employeeId) {
+    public ClientDetailDTO createClient(ClientCreateRequestDTO request, String requesterEmployeeId, boolean isAdmin) {
         if (clientRepository.existsByPersonalId(request.personalId())) {
             throw new ResourceConflictException("Client with this personal ID already exists.");
         }
 
         if (request.idCardIssueDate().isAfter(request.idCardExpiryDate())) {
-            throw new IllegalArgumentException("ID card issue date must precede the expiry date.");
+            throw new InvalidInputValueException("ID card issue date must precede the expiry date.");
         }
 
-        Advisor advisor = advisorRepository.findByEmployeeId(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Advisor context not found."));
+        String targetAdvisorId = requesterEmployeeId;
+        if (isAdmin) {
+            if (request.advisorEmployeeId() == null || request.advisorEmployeeId().isBlank()) {
+                throw new InvalidInputValueException("Administrators must explicitly provide an advisorEmployeeId when creating a client.");
+            }
+            targetAdvisorId = request.advisorEmployeeId();
+        }
+
+        Advisor advisor = advisorRepository.findByEmployeeId(targetAdvisorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Target Advisor not found."));
 
         Address permanentRef = resolveAddressEntity(request.permanentAddress());
         Address contactRef = resolveAddressEntity(request.contactAddress());

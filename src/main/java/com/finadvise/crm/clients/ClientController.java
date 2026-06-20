@@ -17,6 +17,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
+
 @Tag(name = "Clients", description = "Core operations for managing client lifecycle, details, and search capabilities.")
 @RestController
 @RequestMapping("/api/v1/clients")
@@ -35,9 +37,9 @@ public class ClientController {
     @GetMapping("/{clientUid}")
     public ResponseEntity<ClientDetailDTO> getClientDetail(
             @PathVariable String clientUid,
-            Authentication authentication) {
+            Principal principal) {
 
-        return ResponseEntity.ok(clientDetailFacade.getClientDetail(clientUid, authentication.getName()));
+        return ResponseEntity.ok(clientDetailFacade.getClientDetail(clientUid, principal.getName()));
     }
 
     @Operation(summary = "Create Client", description = "Registers a new client, generates a business UID, and resolves addresses.")
@@ -53,7 +55,11 @@ public class ClientController {
             @Valid @RequestBody ClientCreateRequestDTO request,
             Authentication authentication) {
 
-        ClientDetailDTO createdClient = clientService.createClient(request, authentication.getName());
+        ClientDetailDTO createdClient = clientService.createClient(
+                request,
+                authentication.getName(),
+                isAdmin(authentication)
+        );
         return ResponseEntity.status(HttpStatus.CREATED).body(createdClient);
     }
 
@@ -69,9 +75,9 @@ public class ClientController {
     public ResponseEntity<Void> updateClientDetails(
             @PathVariable String clientUid,
             @Valid @RequestBody ClientUpdateDetailsRequestDTO request,
-            Authentication authentication) {
+            Principal principal) {
 
-        clientService.updateClientDetails(clientUid, request, authentication.getName());
+        clientService.updateClientDetails(clientUid, request, principal.getName());
         return ResponseEntity.noContent().build();
     }
 
@@ -87,9 +93,9 @@ public class ClientController {
     public ResponseEntity<Void> updateClientIdCard(
             @PathVariable String clientUid,
             @Valid @RequestBody ClientUpdateIdCardRequestDTO request,
-            Authentication authentication) {
+            Principal principal) {
 
-        clientService.updateClientIdCard(clientUid, request, authentication.getName());
+        clientService.updateClientIdCard(clientUid, request, principal.getName());
         return ResponseEntity.noContent().build();
     }
 
@@ -138,10 +144,9 @@ public class ClientController {
             @RequestParam(defaultValue = "10") int pageSize,
             Authentication authentication) {
 
-        String userType = isAdmin(authentication) ? "ADMIN" : "ADVISOR";
         Page<ClientDashboardSummary> summaries = clientService.getRecentClientSummaries(
                 authentication.getName(),
-                userType,
+                isAdmin(authentication),
                 pageSize
         );
         return ResponseEntity.ok(summaries);

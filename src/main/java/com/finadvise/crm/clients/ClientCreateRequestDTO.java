@@ -81,5 +81,8 @@ public record ClientCreateRequestDTO(
 
         @NotNull(message = "Contact address must be provided")
         @Valid
-        AddressInputDTO contactAddress
+        AddressInputDTO contactAddress,
+
+        @Pattern(regexp = "^[a-zA-Z0-9\\-]+$", message = "Invalid payload")
+        String advisorEmployeeId
 ) {}

@@ -72,7 +72,7 @@ class ClientServiceTest {
                 "9001011234", LocalDate.of(1990, 1, 1), "John", "Doe",
                 "Developer", "+420123456789", "john@example.com",
                 "ID123", LocalDate.of(2020, 1, 1), LocalDate.of(2030, 1, 1), "Issuer",
-                addressInput, addressInput
+                addressInput, addressInput, null
         );
 
         Advisor advisor = new Advisor();
@@ -91,7 +91,7 @@ class ClientServiceTest {
         when(clientRepository.save(any(Client.class))).thenReturn(savedClient);
         when(clientMapper.toDetailDto(savedClient)).thenReturn(mock(ClientDetailDTO.class));
 
-        clientService.createClient(request, EMPLOYEE_ID);
+        clientService.createClient(request, EMPLOYEE_ID, false);
 
         verify(clientRepository).save(clientCaptor.capture());
         Client captured = clientCaptor.getValue();
@@ -108,7 +108,7 @@ class ClientServiceTest {
         when(request.personalId()).thenReturn("9001011234");
         when(clientRepository.existsByPersonalId("9001011234")).thenReturn(true);
 
-        assertThatThrownBy(() -> clientService.createClient(request, EMPLOYEE_ID))
+        assertThatThrownBy(() -> clientService.createClient(request, EMPLOYEE_ID, false))
                 .isInstanceOf(ResourceConflictException.class)
                 .hasMessageContaining("already exists");
     }
@@ -122,7 +122,7 @@ class ClientServiceTest {
         when(request.idCardIssueDate()).thenReturn(LocalDate.of(2030, 1, 1));
         when(request.idCardExpiryDate()).thenReturn(LocalDate.of(2020, 1, 1)); // Expiry before issue
 
-        assertThatThrownBy(() -> clientService.createClient(request, EMPLOYEE_ID))
+        assertThatThrownBy(() -> clientService.createClient(request, EMPLOYEE_ID, false))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("must precede");
     }
