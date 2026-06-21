@@ -1,6 +1,7 @@
 package com.finadvise.crm.clients;
 
 import com.finadvise.crm.addresses.AddressInputDTO;
+import com.finadvise.crm.common.InvalidInputValueException;
 import com.finadvise.crm.common.ResourceConflictException;
 import com.finadvise.crm.common.ResourceNotFoundException;
 import com.finadvise.crm.common.TestFixtureFactory;
@@ -93,7 +94,7 @@ class ClientServiceIT {
         );
 
         assertThatThrownBy(() -> clientService.createClient(payload, testAdvisor.getEmployeeId(), false))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(InvalidInputValueException.class)
                 .hasMessageContaining("ID card issue date must precede the expiry date");
     }
 
