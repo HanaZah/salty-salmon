@@ -2,8 +2,13 @@ package com.finadvise.crm.products;
 
 import com.finadvise.crm.clients.Client;
 import com.finadvise.crm.clients.ClientRepository;
+import com.finadvise.crm.common.ResourceConflictException;
 import com.finadvise.crm.common.ResourceNotFoundException;
 import com.finadvise.crm.common.TestFixtureFactory;
+import com.finadvise.crm.documents.Document;
+import com.finadvise.crm.documents.DocumentRepository;
+import com.finadvise.crm.documents.DocumentType;
+import com.finadvise.crm.documents.DocumentTypeRepository;
 import com.finadvise.crm.users.Advisor;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +17,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Container;
@@ -21,6 +27,7 @@ import org.testcontainers.oracle.OracleContainer;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -41,6 +48,8 @@ class ProductServiceIT {
     @Autowired private ProviderRepository providerRepository;
     @Autowired private TestFixtureFactory testFixtureFactory;
     @Autowired private ClientRepository clientRepository;
+    @Autowired private DocumentRepository documentRepository;
+    @Autowired private DocumentTypeRepository documentTypeRepository;
 
     // --- CREATE TESTS ---
 
@@ -159,18 +168,20 @@ class ProductServiceIT {
     // --- DELETE TESTS ---
 
     @Test
-    void deleteProduct_DeletesSuccessfully_WhenAdvisorOwnsClient() {
+    @WithMockUser(username = "ADMIN-0407", authorities = "ADMIN")
+    void deleteProduct_Success_WhenAdminDeletesUnlinkedProduct() {
         Advisor testAdvisor = testFixtureFactory.getOrCreateTestAdvisor(
-                107L, "EMP-0107", "10000007", "OwnerAdvisor");
+                104L, "EMP-0107", "10000007", "OwnerAdvisor");
         Client testClient = testFixtureFactory.getOrCreateTestClient(
-                107L, "CLI-0107", "1000000007", "100000007", "Miller", testAdvisor);
+                104L, "CLI-0106", "1000000006", "100000006", "Doe", testAdvisor);
+        documentRepository.deleteAll();
 
-        ProductType type = productTypeRepository.save(ProductType.builder().name("Bonds").build());
-        Provider provider = providerRepository.save(Provider.builder().name("State").build());
+        ProductType type = productTypeRepository.save(ProductType.builder().name("TestProductType").build());
+        Provider provider = providerRepository.save(Provider.builder().name("TestProductProvider").build());
 
-        Product product = productRepository.save(Product.builder()
-                .name("Gov Bonds")
-                .amount(new BigDecimal("20000.00"))
+        Product testProduct = productRepository.save(Product.builder()
+                .name("Global Equity")
+                .amount(new BigDecimal("10000.00"))
                 .startDate(LocalDate.now().minusDays(10))
                 .nextAnniversary(LocalDate.now().plusYears(1))
                 .client(testClient)
@@ -178,26 +189,39 @@ class ProductServiceIT {
                 .provider(provider)
                 .build());
 
-        productService.deleteProduct(testClient.getClientUid(), product.getId(), testAdvisor.getEmployeeId());
+        productService.deleteProduct(testClient.getClientUid(), testProduct.getId());
 
-        assertThat(productRepository.findById(product.getId())).isEmpty();
+        Optional<Product> deletedProduct = productRepository.findById(testProduct.getId());
+        assertThat(deletedProduct).isEmpty();
     }
 
     @Test
-    void deleteProduct_ThrowsResourceNotFoundException_ToPreventIdEnumeration() {
-        Advisor primaryAdvisor = testFixtureFactory.getOrCreateTestAdvisor(
-                108L, "EMP-0108", "10000008", "OwnerAdvisor");
-        Advisor rogueAdvisor = testFixtureFactory.getOrCreateTestAdvisor(
-                109L, "EMP-0109", "10000009", "RogueAdvisor");
+    @WithMockUser(username = "ADMIN-0407", authorities = "ADMIN")
+    void deleteProduct_Fails_ThrowsNotFound_WhenIdMismatch() {
+        Advisor testAdvisor = testFixtureFactory.getOrCreateTestAdvisor(
+                104L, "EMP-0107", "10000007", "OwnerAdvisor");
         Client testClient = testFixtureFactory.getOrCreateTestClient(
-                108L, "CLI-0108", "1000000008", "100000008", "Taylor", primaryAdvisor);
+                104L, "CLI-0106", "1000000006", "100000006", "Doe", testAdvisor);
+        Long invalidProductId = 99999L;
 
-        ProductType type = productTypeRepository.save(ProductType.builder().name("Mutual Fund").build());
-        Provider provider = providerRepository.save(Provider.builder().name("Fidelity").build());
+        assertThatThrownBy(() -> productService.deleteProduct(testClient.getClientUid(), invalidProductId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Product not found or access denied");
+    }
 
-        Product product = productRepository.save(Product.builder()
-                .name("Tech Fund")
-                .amount(new BigDecimal("30000.00"))
+    @Test
+    @WithMockUser(username = "ADMIN-0407", authorities = "ADMIN")
+    void deleteProduct_Fails_ThrowsConflict_WhenDocumentsLinked() {
+        Advisor testAdvisor = testFixtureFactory.getOrCreateTestAdvisor(
+                104L, "EMP-0107", "10000007", "OwnerAdvisor");
+        Client testClient = testFixtureFactory.getOrCreateTestClient(
+                104L, "CLI-0106", "1000000006", "100000006", "Doe", testAdvisor);
+
+        ProductType type = productTypeRepository.save(ProductType.builder().name("TestProductType").build());
+        Provider provider = providerRepository.save(Provider.builder().name("TestProductProvider").build());
+        Product testProduct = productRepository.save(Product.builder()
+                .name("Global Equity")
+                .amount(new BigDecimal("10000.00"))
                 .startDate(LocalDate.now().minusDays(10))
                 .nextAnniversary(LocalDate.now().plusYears(1))
                 .client(testClient)
@@ -205,10 +229,22 @@ class ProductServiceIT {
                 .provider(provider)
                 .build());
 
-        assertThatThrownBy(() -> productService.deleteProduct(
-                testClient.getClientUid(), product.getId(), rogueAdvisor.getEmployeeId()))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("Product not found, does not belong to this client, or access denied");
+        DocumentType testDocumentType = documentTypeRepository.save(DocumentType.builder().name("TestDocType").build());
+        Document document = Document.builder()
+                .fileName("contract.pdf")
+                .filePath("s3://bucket/contract.pdf")
+                .documentType(testDocumentType)
+                .client(testClient)
+                .product(testProduct)
+                .isActive(true)
+                .build();
+        documentRepository.save(document);
+
+        assertThatThrownBy(() -> productService.deleteProduct(testClient.getClientUid(), testProduct.getId()))
+                .isInstanceOf(ResourceConflictException.class)
+                .hasMessageContaining("Linked documents exist");
+
+        assertThat(productRepository.existsById(testProduct.getId())).isTrue();
     }
 
     // --- GET CLIENT PRODUCTS TESTS ---

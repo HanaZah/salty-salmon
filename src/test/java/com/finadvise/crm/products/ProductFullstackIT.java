@@ -2,6 +2,10 @@ package com.finadvise.crm.products;
 
 import com.finadvise.crm.clients.Client;
 import com.finadvise.crm.common.TestFixtureFactory;
+import com.finadvise.crm.documents.Document;
+import com.finadvise.crm.documents.DocumentRepository;
+import com.finadvise.crm.documents.DocumentType;
+import com.finadvise.crm.documents.DocumentTypeRepository;
 import com.finadvise.crm.users.Advisor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,18 +51,21 @@ class ProductFullstackIT {
     @Autowired private ProductTypeRepository productTypeRepository;
     @Autowired private ProviderRepository providerRepository;
     @Autowired private TestFixtureFactory testFixtureFactory;
+    @Autowired private DocumentRepository documentRepository;
+    @Autowired private DocumentTypeRepository documentTypeRepository;
 
+    private Advisor testAdvisor;
     private Client testClient;
     private ProductType testProductType;
     private Provider testProvider;
 
     @BeforeEach
     void setUp() {
-        Advisor primaryAdvisor = testFixtureFactory.getOrCreateTestAdvisor(
+        testAdvisor = testFixtureFactory.getOrCreateTestAdvisor(
                 201L, "ADV-0001", "11111111", "PrimaryOwner");
 
         testClient = testFixtureFactory.getOrCreateTestClient(
-                201L, "CLI-0001", "1234567890", "123456789", "Smith", primaryAdvisor);
+                201L, "CLI-0001", "1234567890", "123456789", "Smith", testAdvisor);
 
         testProductType = productTypeRepository.findByName("Life Insurance")
                 .orElseGet(() -> productTypeRepository.save(ProductType.builder().name("Life Insurance").build()));
@@ -221,42 +228,87 @@ class ProductFullstackIT {
     // --- DELETE PRODUCT TESTS ---
 
     @Test
-    @WithMockUser(username = "ADV-0001", authorities = "ADVISOR")
-    void deleteProduct_Success_Returns204NoContent() throws Exception {
-        Product existingProduct = productRepository.save(Product.builder()
-                .name("Disposable Plan")
-                .amount(new BigDecimal("100.00"))
-                .startDate(LocalDate.now())
+    @WithMockUser(username = "ADMIN-0403", authorities = "ADMIN")
+    void deleteProduct_Success_Returns204_WhenUnlinkedProduct() throws Exception {
+        Product testProduct = Product.builder()
+                .name("TestProduct")
+                .amount(new BigDecimal("10000.00"))
+                .startDate(LocalDate.now().minusDays(10))
                 .nextAnniversary(LocalDate.now().plusYears(1))
-                .client(testClient)
                 .productType(testProductType)
+                .client(testClient)
                 .provider(testProvider)
-                .build());
+                .managedBy(testAdvisor)
+                .build();
+
+        productRepository.save(testProduct);
+        documentRepository.deleteAll();
 
         mockMvc.perform(delete("/api/v1/clients/{clientUid}/products/{productId}",
-                        testClient.getClientUid(), existingProduct.getId()))
+                        testClient.getClientUid(), testProduct.getId()))
                 .andExpect(status().isNoContent());
 
-        assertThat(productRepository.findById(existingProduct.getId())).isEmpty();
+        assertThat(productRepository.existsById(testProduct.getId())).isFalse();
     }
 
     @Test
-    @WithMockUser(username = "ROG-0002", authorities = "ADVISOR")
-    void deleteProduct_ReturnsOpaque404_ToPreventIdEnumeration() throws Exception {
-        Product existingProduct = productRepository.save(Product.builder()
-                .name("Protected Plan")
+    @WithMockUser(username = "ADMIN-0403", authorities = "ADMIN")
+    void deleteProduct_Fails_Returns404_WhenProductDoesNotBelongToClient() throws Exception {
+        String wrongClientUid = "OTHER-UID";
+        Product testProduct = Product.builder()
+                .name("TestProduct")
                 .amount(new BigDecimal("10000.00"))
-                .startDate(LocalDate.now())
+                .startDate(LocalDate.now().minusDays(10))
                 .nextAnniversary(LocalDate.now().plusYears(1))
-                .client(testClient)
                 .productType(testProductType)
+                .client(testClient)
                 .provider(testProvider)
-                .build());
+                .managedBy(testAdvisor)
+                .build();
+
+        productRepository.save(testProduct);
 
         mockMvc.perform(delete("/api/v1/clients/{clientUid}/products/{productId}",
-                        testClient.getClientUid(), existingProduct.getId()))
+                        wrongClientUid, testProduct.getId()))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.title").value("Resource Not Found"));
+                .andExpect(jsonPath("$.title").value("Resource Not Found"))
+                .andExpect(jsonPath("$.type").value("https://api.finadvise.com/errors/not-found"));
+    }
+
+    @Test
+    @WithMockUser(username = "ADMIN-0403", authorities = "ADMIN")
+    void deleteProduct_Fails_Returns409_WhenDocumentsLinked() throws Exception {
+        Product testProduct = Product.builder()
+                .name("TestProduct")
+                .amount(new BigDecimal("10000.00"))
+                .startDate(LocalDate.now().minusDays(10))
+                .nextAnniversary(LocalDate.now().plusYears(1))
+                .productType(testProductType)
+                .client(testClient)
+                .provider(testProvider)
+                .managedBy(testAdvisor)
+                .build();
+
+        productRepository.save(testProduct);
+
+        DocumentType testDocumentType = documentTypeRepository.save(DocumentType.builder().name("TestDocType").build());
+        Document document = Document.builder()
+                .fileName("policy.pdf")
+                .filePath("s3://bucket/policy.pdf")
+                .documentType(testDocumentType)
+                .client(testClient)
+                .product(testProduct)
+                .isActive(true)
+                .build();
+        documentRepository.save(document);
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/v1/clients/{clientUid}/products/{productId}",
+                        testClient.getClientUid(), testProduct.getId()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Resource Conflict"))
+                .andExpect(jsonPath("$.detail").value("Cannot delete product: Linked documents exist. All documents must be hard-deleted first."))
+                .andExpect(jsonPath("$.type").value("https://api.finadvise.com/errors/resource-conflict"));
     }
 
     // --- SEARCH PRODUCTS TESTS ---

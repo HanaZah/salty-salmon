@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -81,16 +82,18 @@ public class ProductController {
     @Operation(summary = "Delete Product", description = "Removes a product from the client's portfolio.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Product deleted successfully"),
+            @ApiResponse(responseCode = "400", description = "Document live reference detected",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Product/Client not found or access denied (opaque response)",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @DeleteMapping("/clients/{clientUid}/products/{productId}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<Void> deleteProduct(
             @PathVariable String clientUid,
-            @PathVariable Long productId,
-            Principal principal) {
+            @PathVariable Long productId) {
 
-        productService.deleteProduct(clientUid, productId, principal.getName());
+        productService.deleteProduct(clientUid, productId);
         return ResponseEntity.noContent().build();
     }
 

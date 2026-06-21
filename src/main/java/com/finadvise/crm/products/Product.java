@@ -47,7 +47,7 @@ public class Product {
     private ProductType productType;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "CLIENT_ID", nullable = false)
+    @JoinColumn(name = "CLIENT_ID", nullable = false, updatable = false)
     @NotNull(message = "Client is required")
     private Client client;
 
@@ -57,7 +57,7 @@ public class Product {
     private Provider provider;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "MANAGED_BY_ID")
+    @JoinColumn(name = "MANAGED_BY_ID", updatable = false)
     private Advisor managedBy;
 
     @Column(name = "NEXT_ANNIVERSARY", nullable = false)

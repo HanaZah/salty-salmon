@@ -62,4 +62,6 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Query("SELECT COUNT(p) FROM Product p " +
             "WHERE p.client.clientUid = :clientUid AND p.managedBy.employeeId = :employeeId AND (p.endDate IS NULL OR p.endDate > CURRENT_DATE)")
     Integer countActiveByClientUidAndAdvisor(@Param("clientUid") String clientUid, @Param("employeeId") String employeeId);
+
+    boolean existsByIdAndClientClientUid(Long id, String clientUid);
 }

@@ -73,4 +73,7 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     List<Document> findAllByStorageDeletedAtNullAndIsActiveFalse();
 
     List<Document> findAllByClientClientUidAndIsActiveTrue(String clientUid);
+
+    boolean existsByProductId(Long productId);
+
 }

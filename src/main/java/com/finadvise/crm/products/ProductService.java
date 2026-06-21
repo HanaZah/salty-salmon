@@ -2,13 +2,16 @@ package com.finadvise.crm.products;
 
 import com.finadvise.crm.clients.ClientRepository;
 import com.finadvise.crm.common.OwnershipValidator;
+import com.finadvise.crm.common.ResourceConflictException;
 import com.finadvise.crm.common.ResourceNotFoundException;
+import com.finadvise.crm.documents.DocumentRepository;
 import com.finadvise.crm.users.AdvisorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +28,7 @@ public class ProductService {
     private final OwnershipValidator ownershipValidator;
     private final ClientRepository clientRepository;
     private final AdvisorRepository advisorRepository;
+    private final DocumentRepository documentRepository;
     private final Clock clock;
 
     private LocalDate calculateNextAnniversary(LocalDate startDate) {
@@ -100,9 +104,15 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProduct(String clientUid, Long productId, String employeeId) {
-        if (!ownershipValidator.canModifyProduct(clientUid, productId, employeeId)) {
-            throw new ResourceNotFoundException("Product not found, does not belong to this client, or access denied");
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public void deleteProduct(String clientUid, Long productId) {
+        if (!ownershipValidator.ownsProduct(clientUid, productId)) {
+            throw new ResourceNotFoundException("Product not found or access denied");
+        }
+        if (documentRepository.existsByProductId(productId)) {
+            throw new ResourceConflictException(
+                    "Cannot delete product: Linked documents exist. All documents must be hard-deleted first."
+            );
         }
 
         productRepository.deleteById(productId);

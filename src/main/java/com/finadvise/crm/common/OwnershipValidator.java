@@ -28,6 +28,10 @@ public class OwnershipValidator {
         return assetRepository.existsByIdAndClientClientUid(assetId, clientUid);
     }
 
+    public boolean ownsProduct(String clientUid, Long productId) {
+        return productRepository.existsByIdAndClientClientUid(productId, clientUid);
+    }
+
     public boolean canModifyProduct(String clientUid, Long productId, String employeeId) {
         return productRepository.canModifyProduct(productId, clientUid, employeeId);
     }

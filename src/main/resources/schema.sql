@@ -332,8 +332,8 @@ BEGIN
 END;
 /
 
-CREATE OR REPLACE TRIGGER TRG_PRODUCTS_BI
-BEFORE INSERT ON PRODUCTS
+CREATE OR REPLACE TRIGGER TRG_PRODUCTS_BIU
+BEFORE INSERT OR UPDATE ON PRODUCTS
 FOR EACH ROW
 DECLARE
     v_expiry DATE;
@@ -341,24 +341,36 @@ DECLARE
     v_client_active NUMBER(1);
     v_manager_active NUMBER(1);
 BEGIN
-    SELECT ID_CARD_EXPIRY_DATE, ADVISOR_ID, IS_ACTIVE
-    INTO v_expiry, v_current_adv, v_client_active
-    FROM CLIENTS WHERE CLIENT_ID = :NEW.CLIENT_ID;
+    IF INSERTING THEN
+        SELECT ID_CARD_EXPIRY_DATE, ADVISOR_ID, IS_ACTIVE
+        INTO v_expiry, v_current_adv, v_client_active
+        FROM CLIENTS WHERE CLIENT_ID = :NEW.CLIENT_ID;
 
-    IF v_client_active = 0 THEN
-        raise_application_error(-20014, 'Cannot arrange product: Client is inactive.');
+        IF v_client_active = 0 THEN
+            raise_application_error(-20014, 'Cannot arrange product: Client is inactive.');
+        END IF;
+        IF v_expiry < SYSDATE THEN
+            raise_application_error(-20001, 'Cannot arrange product: Client ID card expired.');
+        END IF;
+        IF :NEW.MANAGED_BY_ID IS NOT NULL THEN
+            IF v_current_adv <> :NEW.MANAGED_BY_ID THEN
+                raise_application_error(-20004, 'The arranger must be the client current advisor.');
+            END IF;
+
+            SELECT IS_ACTIVE INTO v_manager_active FROM USERS WHERE USER_ID = :NEW.MANAGED_BY_ID;
+            IF v_manager_active = 0 THEN
+                 raise_application_error(-20015, 'Cannot assign an inactive advisor to manage a product.');
+            END IF;
+        END IF;
     END IF;
-    IF v_expiry < SYSDATE THEN
-        raise_application_error(-20001, 'Cannot arrange product: Client ID card expired (PP01).');
-    END IF;
-    IF :NEW.MANAGED_BY_ID IS NOT NULL THEN
-        IF v_current_adv <> :NEW.MANAGED_BY_ID THEN
-            raise_application_error(-20004, 'The arranger must be the client current advisor (PP04).');
+
+    IF UPDATING THEN
+        IF NVL(:NEW.MANAGED_BY_ID, -1) <> NVL(:OLD.MANAGED_BY_ID, -1) THEN
+            raise_application_error(-20022, 'Product manager (arranger) is strictly immutable and cannot be reassigned.');
         END IF;
 
-        SELECT IS_ACTIVE INTO v_manager_active FROM USERS WHERE USER_ID = :NEW.MANAGED_BY_ID;
-        IF v_manager_active = 0 THEN
-             raise_application_error(-20015, 'Cannot assign an inactive advisor to manage a product.');
+        IF :NEW.CLIENT_ID <> :OLD.CLIENT_ID THEN
+            raise_application_error(-20023, 'A product cannot be reassigned to a different client.');
         END IF;
     END IF;
 END;
