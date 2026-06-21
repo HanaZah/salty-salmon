@@ -250,6 +250,7 @@ class DocumentFullstackIT {
         String expectedUrl = "https://mock-s3-url.com/download?signature=123";
         when(s3Template.createSignedGetURL(any(), eq("s3-key-download"), any(Duration.class)))
                 .thenReturn(URI.create(expectedUrl).toURL());
+        when(s3Template.objectExists(any(), eq("s3-key-download"))).thenReturn(true);
 
         mockMvc.perform(get("/api/v1/clients/{clientUid}/documents/{docId}/download",
                         testClient.getClientUid(), savedDoc.getId())

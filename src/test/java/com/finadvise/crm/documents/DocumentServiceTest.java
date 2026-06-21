@@ -223,7 +223,7 @@ class DocumentServiceTest {
     // --- PRE-SIGNED URL TEST ---
 
     @Test
-    void generateDownloadUrl_ReturnsPresignedUrl_Optimistically() throws Exception {
+    void generateDownloadUrl_ReturnsPresignedUrl_Pessimistically() throws Exception {
         String clientUid = "CLI_01";
         String employeeId = "EMP_01";
         Long documentId = 1L;
@@ -235,10 +235,10 @@ class DocumentServiceTest {
         when(documentRepository.findByIdAndIsActiveTrue(documentId)).thenReturn(Optional.of(doc));
         when(s3Template.createSignedGetURL(eq(BUCKET_NAME), eq("s3-key-123"), any(java.time.Duration.class)))
                 .thenReturn(mockUrl);
+        when(s3Template.objectExists(eq(BUCKET_NAME), eq("s3-key-123"))).thenReturn(true);
 
         String result = documentService.generateDownloadUrl(clientUid, documentId, employeeId);
 
         assertEquals(mockUrl.toString(), result);
-        verify(s3Template, never()).objectExists(anyString(), anyString());
     }
 }

@@ -169,7 +169,7 @@ public class DocumentService {
                         originalFilename, detectedMimeTypeString);
                 throw new UnsupportedDocumentFormatException(
                         "File extension does not match the actual file content. " +
-                        "This file is potentially malformed or malignant."
+                                "This file is potentially malformed or malignant."
                 );
             }
 
@@ -238,18 +238,27 @@ public class DocumentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Document not found or access denied"));
 
         try {
-            /* * ARCHITECTURAL NOTE: Optimistic Execution Pattern
-             * We intentionally do NOT call s3Template.objectExists() here before generating the URL.
-             * Generating a Pre-Signed URL is a purely local cryptographic operation (~1ms).
-             * Checking object existence requires a synchronous HTTP HEAD request to AWS (~20-50ms blocking I/O).
-             * To protect the thread pool under high concurrent load, we blindly assume the file exists.
-             * If the file is missing from S3 (Data Divergence/Split-Brain scenario), AWS will safely return
-             * an XML HTTP 404 (NoSuchKey) directly to the frontend when it attempts the download.
+            /* * ARCHITECTURAL NOTE: Pessimistic Verification Pattern
+             * We execute a synchronous HTTP HEAD request via objectExists() before generating the URL.
+             * This prevents the frontend from receiving a raw AWS XML 404 (NoSuchKey) if a Data Divergence
+             * (Split-Brain) scenario occurs where the DB record exists but the physical S3 file is missing.
              */
+            if (!s3Template.objectExists(bucketName, document.getFilePath())) {
+                log.error("Storage inconsistency detected: S3 object missing for document ID: {}. Expected key: {}",
+                        documentId, document.getFilePath());
+                throw new ResourceNotFoundException(
+                        "The requested file could not be found in the secure storage. Please contact an administrator or re-upload the document."
+                );
+            }
+
             Duration timeToLive = Duration.ofSeconds(downloadUrlExpirationSeconds);
             URL presignedUrl = s3Template.createSignedGetURL(bucketName, document.getFilePath(), timeToLive);
 
             return presignedUrl.toString();
+
+        } catch (ResourceNotFoundException e) {
+            // Re-throw to prevent the generic catch block from wrapping our intentional 404 into a 503
+            throw e;
         } catch (Exception e) {
             log.error("Failed to generate S3 Pre-Signed URL for document ID: {}", documentId, e);
             throw new DmsUnavailableException("Unable to generate secure download link at this time.", e);
