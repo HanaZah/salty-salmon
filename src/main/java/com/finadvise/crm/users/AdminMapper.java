@@ -12,4 +12,13 @@ public class AdminMapper {
                 admin.getLastName()
         );
     }
+
+    public AdminContactDTO toContactDto(AdminContact adminContact) {
+        return new AdminContactDTO(
+                adminContact.getFirstName(),
+                adminContact.getLastName(),
+                adminContact.getPhone(),
+                adminContact.getEmail()
+        );
+    }
 }

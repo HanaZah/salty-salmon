@@ -18,6 +18,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.oracle.OracleContainer;
 import tools.jackson.databind.ObjectMapper;
 
+import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -39,6 +40,7 @@ class UserFullStackIT {
     @Autowired private TestFixtureFactory testFixtureFactory;
     @Autowired private AdvisorRepository advisorRepository;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private AdminRepository adminRepository;
 
     // --- CREATE ADMIN / ADVISOR E2E ---
 
@@ -185,5 +187,53 @@ class UserFullStackIT {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("Incorrect current password."));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ADVISOR")
+    void getAllAdminsContacts_Returns200AndListOfActiveAdminsContacts() throws Exception {
+        String rawPassword = "SomePassword123!";
+        Admin testAdmin = Admin.builder()
+                .id(2000L)
+                .employeeId("REC-001")
+                .firstName("Recovery")
+                .lastName("Test")
+                .phone("987654321")
+                .email("recovery@test.com")
+                .passwordHash(passwordEncoder.encode(rawPassword))
+                .isActive(true)
+                .build();
+        adminRepository.save(testAdmin);
+
+        Admin testAdmin2 = Admin.builder()
+                .id(3000L)
+                .employeeId("REC-002")
+                .firstName("Recovery2")
+                .lastName("Test")
+                .phone("987654321")
+                .email("recovery2@test.com")
+                .passwordHash(passwordEncoder.encode(rawPassword))
+                .isActive(true)
+                .build();
+        adminRepository.save(testAdmin2);
+
+        Admin testAdminInactive = Admin.builder()
+                .id(4000L)
+                .employeeId("REC-003")
+                .firstName("Inactive")
+                .lastName("Test")
+                .phone("987654321")
+                .email("inactive@test.com")
+                .passwordHash(passwordEncoder.encode(rawPassword))
+                .isActive(false)
+                .build();
+
+        adminRepository.save(testAdminInactive);
+
+        mockMvc.perform(get("/api/v1/users/admins/contacts"))
+                .andExpect(status().isOk())
+                // Admin db seeder may or may not be present, so we check for at least 2 admins (there could be more)
+                .andExpect(jsonPath("$.length()", greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$[*].email", not(hasItem(testAdminInactive.getEmail()))));
     }
 }

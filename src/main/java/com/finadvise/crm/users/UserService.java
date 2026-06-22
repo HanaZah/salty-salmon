@@ -200,8 +200,8 @@ public class UserService implements UserDetailsService {
                         .orElseThrow(() -> new ResourceNotFoundException("Advisor not found or access denied.")));
     }
 
-    public List<String> getActiveAdminEmails() {
-        return adminRepository.findActiveEmails();
+    public List<AdminContactDTO> getActiveAdminContacts() {
+        return adminRepository.findActiveAdminContacts().stream().map(adminMapper::toContactDto).toList();
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")

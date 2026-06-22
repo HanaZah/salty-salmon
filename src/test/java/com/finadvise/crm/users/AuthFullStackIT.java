@@ -17,9 +17,8 @@ import tools.jackson.databind.ObjectMapper;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.hamcrest.Matchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -83,55 +82,10 @@ class AuthFullStackIT {
     }
 
     @Test
-    void passwordRecovery_Returns200AndDtoWithAdminEmails() throws Exception {
-        String rawPassword = "SomePassword123!";
-        Admin testAdmin = Admin.builder()
-                .id(2000L)
-                .employeeId("REC-001")
-                .firstName("Recovery")
-                .lastName("Test")
-                .phone("987654321")
-                .email("recovery@test.com")
-                .passwordHash(passwordEncoder.encode(rawPassword))
-                .isActive(true)
-                .build();
-        adminRepository.save(testAdmin);
-
-        Admin testAdmin2 = Admin.builder()
-                .id(3000L)
-                .employeeId("REC-002")
-                .firstName("Recovery2")
-                .lastName("Test")
-                .phone("987654321")
-                .email("recovery2@test.com")
-                .passwordHash(passwordEncoder.encode(rawPassword))
-                .isActive(true)
-                .build();
-        adminRepository.save(testAdmin2);
-
-        Admin testAdminInactive = Admin.builder()
-                .id(4000L)
-                .employeeId("REC-003")
-                .firstName("Inactive")
-                .lastName("Test")
-                .phone("987654321")
-                .email("inactive@test.com")
-                .passwordHash(passwordEncoder.encode(rawPassword))
-                .isActive(false)
-                .build();
-
-        adminRepository.save(testAdminInactive);
-
+    void passwordRecovery_Returns200AndMessage() throws Exception {
         mockMvc.perform(get("/api/v1/auth/password-recovery"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.adminEmails", hasSize(greaterThan(0))))
-                .andExpect(
-                        jsonPath(
-                                "$.adminEmails", containsInAnyOrder(
-                                        "recovery@test.com", "recovery2@test.com", "admin@test.com"
-                                )
-                        )
-                );
+                .andExpect(content().string(containsString("Please contact support for password recovery")));
 
     }
 }

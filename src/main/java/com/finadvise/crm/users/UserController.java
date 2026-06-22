@@ -16,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.List;
 
 @Tag(name = "User Management", description = "Admin-level user creation and personal profile updates")
 @RestController
@@ -140,4 +141,14 @@ public class UserController {
         userService.deactivateUser(employeeId);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "List all active Admins contacts", description = "Fetches a list of all active Admins contact information")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Contact list retrieved successfully")
+    })
+    @GetMapping("/admins/contacts")
+    public List<AdminContactDTO> getAllAdminsContacts() {
+        return userService.getActiveAdminContacts();
+    }
+
 }

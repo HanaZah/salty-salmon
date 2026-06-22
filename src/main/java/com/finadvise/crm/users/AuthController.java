@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
-    private final UserService userService;
 
     @Operation(summary = "User Login", description = "Authenticates credentials and returns a JWT access token.")
     @ApiResponses({
@@ -39,7 +38,7 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "Successful data fetch")
     )
     @GetMapping("/password-recovery")
-    public PasswordRecoveryResponseDTO passwordRecovery() {
-        return new PasswordRecoveryResponseDTO("Admin contact necessary", userService.getActiveAdminEmails());
+    public String passwordRecovery() {
+        return "Please contact support for password recovery";
     }
 }

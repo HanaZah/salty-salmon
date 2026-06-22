@@ -7,8 +7,15 @@ import java.util.List;
 
 public interface AdminRepository extends JpaRepository<Admin, Long> {
 
-    @Query("SELECT u.email FROM User u WHERE TYPE(u) = Admin AND u.isActive = true")
-    List<String> findActiveEmails();
+    @Query(""" 
+        SELECT u.firstName as firstName,
+               u.lastName as lastName,
+               u.email as email,
+               u.phone as phone
+        FROM User u
+        WHERE TYPE(u) = Admin AND u.isActive = true
+    """)
+    List<AdminContact> findActiveAdminContacts();
 
     Boolean existsByEmployeeId(String employeeId);
 }
