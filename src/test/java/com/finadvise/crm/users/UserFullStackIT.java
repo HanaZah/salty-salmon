@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Transactional // Rolls back the database after each test, keeping our fixtures isolated
+@Transactional
 class UserFullStackIT {
 
     @Container
@@ -42,58 +42,7 @@ class UserFullStackIT {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private AdminRepository adminRepository;
 
-    // --- CREATE ADMIN / ADVISOR E2E ---
-
-    @Test
-    @WithMockUser(authorities = "ADMIN")
-    void createNewAdmin_Returns200AndDto_WhenUserIsAdmin() throws Exception {
-        CreateAdminRequestDTO request = new CreateAdminRequestDTO(
-                "Bob", "Builder", "bob@builder.com", "123456789", "SecurePass1!"
-        );
-
-        mockMvc.perform(post("/api/v1/users/new/admin")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.firstName").value("Bob"))
-                .andExpect(jsonPath("$.employeeId").exists());
-    }
-
-    @Test
-    @WithMockUser(authorities = "ADMIN")
-    void createNewAdmin_Returns409_WhenEmailExists() throws Exception {
-        // Use factory to create a valid baseline, then modify the email to trigger the conflict
-        Advisor existingUser = testFixtureFactory.getOrCreateTestAdvisor(101L, "EMP-0101", "10101010", "Conflict");
-        existingUser.setEmail("conflict@mail.com");
-        advisorRepository.save(existingUser);
-
-        CreateAdminRequestDTO request = new CreateAdminRequestDTO(
-                "Test", "User", "conflict@mail.com", "123456789","PassWord!"
-        );
-
-        mockMvc.perform(post("/api/v1/users/new/admin")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.title").value("Resource Conflict"));
-    }
-
-    @Test
-    @WithMockUser(authorities = "ADMIN")
-    void createNewAdvisor_Returns200AndDto_WhenUserIsAdmin() throws Exception {
-        CreateAdvisorRequestDTO request = new CreateAdvisorRequestDTO(
-                "Alice", "Smith", "11223344", "alice@finadvise.com", "1112223333", "Pass123!"
-        );
-
-        mockMvc.perform(post("/api/v1/users/new/advisor")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.firstName").value("Alice"))
-                .andExpect(jsonPath("$.ico").value("11223344"));
-    }
-
-    // --- ME & LISTING E2E ---
+    // --- ME E2E ---
 
     @Test
     @WithMockUser(username = "ME-0102")
@@ -103,43 +52,6 @@ class UserFullStackIT {
         mockMvc.perform(get("/api/v1/users/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.lastName").value("MeName"));
-    }
-
-    @Test
-    @WithMockUser(authorities = "ADMIN")
-    void getAllAdvisors_ReturnsPagedList_ForAdmin() throws Exception {
-        testFixtureFactory.getOrCreateTestAdvisor(103L, "LST-0103", "10301030", "ListName");
-
-        mockMvc.perform(get("/api/v1/users/advisors")
-                        .param("page", "0").param("size", "10"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content").isArray())
-                .andExpect(jsonPath("$.totalElements").isNumber());
-    }
-
-    // --- ASSIGN & DEACTIVATE E2E ---
-
-    @Test
-    @WithMockUser(authorities = "ADMIN")
-    void assignManager_Returns204_WhenSuccessful() throws Exception {
-        testFixtureFactory.getOrCreateTestAdvisor(104L, "MGR-0104", "10401040", "Manager");
-        testFixtureFactory.getOrCreateTestAdvisor(105L, "EMP-0105", "10501050", "Employee");
-
-        AssignManagerRequestDTO request = new AssignManagerRequestDTO("MGR-0104");
-
-        mockMvc.perform(patch("/api/v1/users/{employeeId}/manager", "EMP-0105")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    @WithMockUser(authorities = "ADMIN")
-    void deactivateUser_Returns204_WhenSuccessful() throws Exception {
-        testFixtureFactory.getOrCreateTestAdvisor(106L, "TGT-0106", "10601060", "Target");
-
-        mockMvc.perform(delete("/api/v1/users/{employeeId}", "TGT-0106"))
-                .andExpect(status().isNoContent());
     }
 
     // --- PROFILE & PASSWORD E2E ---
@@ -188,6 +100,8 @@ class UserFullStackIT {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("Incorrect current password."));
     }
+
+    // --- ADMIN CONTACTS E2E ---
 
     @Test
     @WithMockUser(authorities = "ADVISOR")

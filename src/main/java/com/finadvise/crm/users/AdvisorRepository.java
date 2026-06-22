@@ -1,12 +1,13 @@
 package com.finadvise.crm.users;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-public interface AdvisorRepository extends JpaRepository<Advisor, Long> {
+public interface AdvisorRepository extends JpaRepository<Advisor, Long>, JpaSpecificationExecutor<Advisor> {
     Boolean existsByIco(String ico);
 
     @Query("SELECT a.id FROM Advisor a WHERE a.employeeId = :employeeId")

@@ -7,7 +7,7 @@ public class AdvisorMapper {
 
     // Overloaded method for the lightweight version (no stats)
     public AdvisorDTO toDto(Advisor advisor) {
-        return toDto(advisor, null);
+        return toDto(advisor, new AdvisorStatisticsDTO(0,0));
     }
 
     // Overloaded method for the heavy version (with stats)

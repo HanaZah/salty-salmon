@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -205,9 +206,9 @@ public class UserService implements UserDetailsService {
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
-    public Page<AdvisorDTO> getAllAdvisors(Pageable pageable) {
-        // Automatically translates to efficient paginated SQL queries
-        return advisorRepository.findAll(pageable).map(advisorMapper::toDto);
+    public Page<AdvisorDTO> searchAdvisors(AdvisorSearchCriteriaDTO criteria, Pageable pageable) {
+        Specification<Advisor> spec = AdvisorSpecifications.withCriteria(criteria);
+        return advisorRepository.findAll(spec, pageable).map(advisorMapper::toDto);
     }
 
     @Transactional

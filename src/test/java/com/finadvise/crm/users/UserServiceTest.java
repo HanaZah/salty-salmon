@@ -4,14 +4,13 @@ import com.finadvise.crm.common.ObfuscatedIdGenerator;
 import com.finadvise.crm.common.ResourceConflictException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -178,17 +177,39 @@ class UserServiceTest {
     }
 
     @Test
-    void getAllAdvisors_ReturnsPagedData() {
-        Page<Advisor> page = new PageImpl<>(List.of(new Advisor()));
-        when(advisorRepository.findAll(any(PageRequest.class))).thenReturn(page);
-        when(advisorMapper.toDto(any())).thenReturn(new AdvisorDTO(
-                0, "A", "1", "F", "L", "1", "e", null, null
-        ));
+    void searchAdvisors_ReturnsPagedData_WhenAdvisorsMatchCriteria() {
+        AdvisorSearchCriteriaDTO criteria = new AdvisorSearchCriteriaDTO("EMP-1", null, null, null, true);
+        Pageable pageable = PageRequest.of(0, 10);
 
-        Page<AdvisorDTO> result = userService.getAllAdvisors(PageRequest.of(0, 10));
+        Page<Advisor> mockPage = new PageImpl<>(List.of(new Advisor()));
+
+        when(advisorRepository.findAll(ArgumentMatchers.<Specification<Advisor>>any(), eq(pageable))).thenReturn(mockPage);
+
+        when(advisorMapper.toDto(any(Advisor.class))).thenReturn(
+                new AdvisorDTO(0, "A", "1", "F", "L", "1", "e", null, null)
+        );
+
+        Page<AdvisorDTO> result = userService.searchAdvisors(criteria, pageable);
 
         assertThat(result.getTotalElements()).isEqualTo(1);
-        verify(advisorMapper, times(1)).toDto(any());
+        verify(advisorRepository, times(1)).findAll(ArgumentMatchers.<Specification<Advisor>>any(), eq(pageable));
+        verify(advisorMapper, times(1)).toDto(any(Advisor.class));
+    }
+
+    @Test
+    void searchAdvisors_ReturnsEmptyPage_WhenNoAdvisorsMatch() {
+        AdvisorSearchCriteriaDTO criteria = new AdvisorSearchCriteriaDTO("NON-EXISTENT", null, null, null, null);
+        Pageable pageable = PageRequest.of(0, 10);
+
+        when(advisorRepository.findAll(ArgumentMatchers.<Specification<Advisor>>any(), eq(pageable))).thenReturn(Page.empty(pageable));
+
+        Page<AdvisorDTO> result = userService.searchAdvisors(criteria, pageable);
+
+        assertThat(result.getTotalElements()).isEqualTo(0);
+        assertThat(result.getContent()).isEmpty();
+
+        verify(advisorRepository, times(1)).findAll(ArgumentMatchers.<Specification<Advisor>>any(), eq(pageable));
+        verify(advisorMapper, never()).toDto(any(Advisor.class));
     }
 
     @Test
