@@ -1,5 +1,10 @@
 
-# FinAdvise-Core: Modern Wealth Management Backend [WIP]
+# FinAdvise-Core: Modern Wealth Management Backend 
+
+## Status: Archived / V1 Prototype
+This repository represents the initial exploratory phase of the CRM, featuring complex infrastructure integrations (AWS S3, asynchronous processing, CRON jobs).
+
+*I am currently rebuilding this project in a new repository, starting with MVP, focusing strictly on core architectural fundamentals, REST semantics, and optimized JPA performance.*
 
 ## 🚀 The Mission
 Transitioning from a background in Delphi development to Modern Enterprise Java, I built this project to demonstrate basic proficiency in building secure, scalable, and testable systems. It makes use of my previous financial career, where similar applications were a staple. What began as a simple "how would I do it?" hobby project is now a showcase of Clean Architecture, Stateless Security, and Defensive Programming.
